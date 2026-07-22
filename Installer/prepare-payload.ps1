@@ -49,6 +49,7 @@ if ([string]::IsNullOrWhiteSpace($GameRoot)) {
 $sourceWin64 = Join-Path $GameRoot 'Pal\Binaries\Win64'
 $sourceUe4ss = Join-Path $sourceWin64 'ue4ss'
 $sourceMod = Join-Path $projectRoot 'Scripts'
+$sourceAltTab = Join-Path $projectRoot 'Mods\AltTabWorkContinuation'
 
 foreach ($required in @(
     (Join-Path $sourceWin64 'dwmapi.dll'),
@@ -60,7 +61,11 @@ foreach ($required in @(
     (Join-Path $sourceMod 'config.lua'),
     (Join-Path $sourceMod 'hover_transfer.lua'),
     (Join-Path $sourceMod 'HoverTransferKeys.dll'),
-    (Join-Path $projectRoot 'enabled.txt')
+    (Join-Path $projectRoot 'enabled.txt'),
+    (Join-Path $sourceAltTab 'enabled.txt'),
+    (Join-Path $sourceAltTab 'Scripts\main.lua'),
+    (Join-Path $sourceAltTab 'Scripts\continuation_policy.lua'),
+    (Join-Path $sourceAltTab 'Scripts\AltTabWorkContinuationFocus.dll')
 )) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
         throw "Arquivo obrigatório ausente: $required"
@@ -79,7 +84,9 @@ if (Test-Path -LiteralPath $payloadRoot) {
 $targetUe4ss = Join-Path $payloadRoot 'ue4ss'
 $targetMod = Join-Path $targetUe4ss 'Mods\HoverTransfer'
 $targetScripts = Join-Path $targetMod 'Scripts'
-New-Item -ItemType Directory -Force -Path $targetScripts | Out-Null
+$targetAltTab = Join-Path $targetUe4ss 'Mods\AltTabWorkContinuation'
+$targetAltTabScripts = Join-Path $targetAltTab 'Scripts'
+New-Item -ItemType Directory -Force -Path $targetScripts, $targetAltTabScripts | Out-Null
 
 Copy-Item -LiteralPath (Join-Path $sourceWin64 'dwmapi.dll') -Destination (Join-Path $payloadRoot 'dwmapi.dll')
 foreach ($name in @('UE4SS.dll', 'UE4SS-settings.ini', 'MemberVariableLayout.ini', 'LICENSE')) {
@@ -89,9 +96,13 @@ Copy-Item -LiteralPath (Join-Path $projectRoot 'enabled.txt') -Destination (Join
 foreach ($name in @('main.lua', 'config.lua', 'hover_transfer.lua', 'HoverTransferKeys.dll')) {
     Copy-Item -LiteralPath (Join-Path $sourceMod $name) -Destination (Join-Path $targetScripts $name)
 }
+Copy-Item -LiteralPath (Join-Path $sourceAltTab 'enabled.txt') -Destination (Join-Path $targetAltTab 'enabled.txt')
+foreach ($name in @('main.lua', 'continuation_policy.lua', 'AltTabWorkContinuationFocus.dll')) {
+    Copy-Item -LiteralPath (Join-Path $sourceAltTab "Scripts\$name") -Destination (Join-Path $targetAltTabScripts $name)
+}
 
 $unexpectedMods = Get-ChildItem -LiteralPath (Join-Path $targetUe4ss 'Mods') -Directory |
-    Where-Object Name -ne 'HoverTransfer'
+    Where-Object Name -notin @('HoverTransfer', 'AltTabWorkContinuation')
 if ($unexpectedMods) {
     throw "O payload contém mods inesperados: $($unexpectedMods.Name -join ', ')"
 }

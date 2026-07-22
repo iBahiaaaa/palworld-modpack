@@ -1,4 +1,6 @@
 build/
+!Mods/AltTabWorkContinuation/build/
+!Mods/AltTabWorkContinuation/build/build-manifest.json
 Releases/*.exe
 Releases/*.zip
 Releases/*.sha256

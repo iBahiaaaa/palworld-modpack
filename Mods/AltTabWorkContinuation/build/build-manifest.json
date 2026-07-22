@@ -1,0 +1,8 @@
+﻿{
+    "source":  "Native/pal_focus.c",
+    "sourceSha256":  "3A39024D8AE46B5754C05402A7596EE53D44FC92A74BAEC2A0175B1F5A934607",
+    "output":  "Scripts/AltTabWorkContinuationFocus.dll",
+    "outputSha256":  "B3F2197986152C0ADE735CB1680CBB89E9BCBF3D46F7E170B3920D756EC758A1",
+    "compiler":  "Microsoft (R) C/C++ Optimizing Compiler Versão 19.44.35208 para x64",
+    "configuration":  "x64 /O2 /MT /Brepro /INCREMENTAL:NO"
+}

@@ -57,7 +57,7 @@ internal sealed class ModpackInstaller
             if (managedFiles.Length == 0 || managedFiles.Any(file => !entries.ContainsKey(file)))
                 throw new InvalidDataException("A lista de arquivos do pacote está incompleta.");
 
-            ValidateRequiredFiles(managedFiles);
+            ValidateRequiredFiles(managedFiles, packageVersion);
             var previous = ReadState(gameRoot);
             backupRoot = Path.Combine(win64, "Palworld-Modpack-Backups", DateTime.Now.ToString("yyyyMMdd-HHmmss"));
             var touchedFiles = managedFiles
@@ -121,10 +121,10 @@ internal sealed class ModpackInstaller
             ?? throw new InvalidDataException("Os metadados do pacote são inválidos.");
     }
 
-    private static void ValidateRequiredFiles(IEnumerable<string> files)
+    private static void ValidateRequiredFiles(IEnumerable<string> files, Version packageVersion)
     {
         var set = files.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var required = new[]
+        var required = new List<string>
         {
             "dwmapi.dll",
             "ue4ss/UE4SS.dll",
@@ -132,6 +132,16 @@ internal sealed class ModpackInstaller
             "ue4ss/Mods/HoverTransfer/Scripts/main.lua",
             "ue4ss/Mods/HoverTransfer/Scripts/HoverTransferKeys.dll",
         };
+        if (packageVersion >= new Version(0, 4, 0))
+        {
+            required.AddRange(new[]
+            {
+                "ue4ss/Mods/AltTabWorkContinuation/enabled.txt",
+                "ue4ss/Mods/AltTabWorkContinuation/Scripts/main.lua",
+                "ue4ss/Mods/AltTabWorkContinuation/Scripts/continuation_policy.lua",
+                "ue4ss/Mods/AltTabWorkContinuation/Scripts/AltTabWorkContinuationFocus.dll",
+            });
+        }
         var missing = required.Where(file => !set.Contains(file)).ToArray();
         if (missing.Length > 0)
             throw new InvalidDataException("Arquivos obrigatórios ausentes: " + string.Join(", ", missing));
