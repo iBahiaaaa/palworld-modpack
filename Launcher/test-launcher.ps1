@@ -8,13 +8,14 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 $launcher = Join-Path $projectRoot "Releases\Palworld-Modpack-Launcher.exe"
 $package = Join-Path $projectRoot "Releases\palworld-modpack.zip"
 $checksum = ((Get-Content -LiteralPath "$package.sha256" -Raw).Trim() -split '\s+')[0]
-$testRoot = Join-Path $PSScriptRoot "test-output"
+$testOutputRoot = Join-Path $PSScriptRoot "test-output"
+$testRoot = Join-Path $testOutputRoot "clean-install"
 $gameRoot = Join-Path $testRoot "SteamLibrary\steamapps\common\Palworld"
 $win64 = Join-Path $gameRoot "Pal\Binaries\Win64"
 
 if (Test-Path -LiteralPath $testRoot) {
     $resolved = [IO.Path]::GetFullPath($testRoot)
-    $allowed = [IO.Path]::GetFullPath($PSScriptRoot) + [IO.Path]::DirectorySeparatorChar
+    $allowed = [IO.Path]::GetFullPath($testOutputRoot) + [IO.Path]::DirectorySeparatorChar
     if (-not $resolved.StartsWith($allowed, [StringComparison]::OrdinalIgnoreCase)) {
         throw "Pasta de teste insegura: $resolved"
     }
@@ -46,6 +47,8 @@ $required = @(
     (Join-Path $win64 "dwmapi.dll"),
     (Join-Path $win64 "ue4ss\UE4SS.dll"),
     (Join-Path $win64 "ue4ss\Mods\HoverTransfer\enabled.txt"),
+    (Join-Path $win64 "ue4ss\Mods\AltTabWorkContinuation\enabled.txt"),
+    (Join-Path $win64 "ue4ss\Mods\AltTabWorkContinuation\Scripts\AltTabWorkContinuationFocus.dll"),
     (Join-Path $win64 "ue4ss\palworld-modpack-state.json"),
     (Join-Path $win64 "arquivo-preservado.txt")
 )
@@ -55,7 +58,7 @@ foreach ($path in $required) {
 
 $state = Get-Content -LiteralPath (Join-Path $win64 "ue4ss\palworld-modpack-state.json") -Raw | ConvertFrom-Json
 if ($state.version -ne $ModpackVersion) { throw "Versão instalada incorreta: $($state.version)" }
-if ($state.managedFiles.Count -lt 5) { throw "Lista de arquivos gerenciados incompleta." }
+if ($state.managedFiles.Count -lt 14) { throw "Lista de arquivos gerenciados incompleta." }
 
 $protectedHash = (Get-FileHash -LiteralPath (Join-Path $win64 "ue4ss\UE4SS.dll") -Algorithm SHA256).Hash
 $info = [Diagnostics.ProcessStartInfo]::new()
