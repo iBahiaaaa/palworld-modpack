@@ -142,6 +142,20 @@ internal sealed class ModpackInstaller
                 "ue4ss/Mods/AltTabWorkContinuation/Scripts/AltTabWorkContinuationFocus.dll",
             });
         }
+        if (packageVersion >= new Version(0, 5, 0))
+        {
+            required.AddRange(new[]
+            {
+                "ue4ss/Mods/AccessorySlotsResearch/enabled.txt",
+                "ue4ss/Mods/AccessorySlotsResearch/Scripts/main.lua",
+                "ue4ss/Mods/AccessorySlotsResearch/Scripts/config.lua",
+                "ue4ss/Mods/AccessorySlotsResearch/Scripts/slot_limits.lua",
+                "ue4ss/Mods/AccessorySlotsResearch/Scripts/equipment_storage.lua",
+                "ue4ss/Mods/AccessorySlotsResearch/Scripts/slot_expander.lua",
+                "ue4ss/Mods/AccessorySlotsResearch/Scripts/slot_refresher.lua",
+                "ue4ss/Mods/AccessorySlotsResearch/Scripts/slot_visual_style.lua",
+            });
+        }
         var missing = required.Where(file => !set.Contains(file)).ToArray();
         if (missing.Length > 0)
             throw new InvalidDataException("Arquivos obrigatórios ausentes: " + string.Join(", ", missing));

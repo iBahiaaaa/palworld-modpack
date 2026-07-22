@@ -1,5 +1,5 @@
 param(
-    [string]$ModpackVersion = "0.3.0",
+    [string]$ModpackVersion = "0.5.0",
     [string]$LauncherVersion = "1.0.0"
 )
 
@@ -49,6 +49,10 @@ $required = @(
     (Join-Path $win64 "ue4ss\Mods\HoverTransfer\enabled.txt"),
     (Join-Path $win64 "ue4ss\Mods\AltTabWorkContinuation\enabled.txt"),
     (Join-Path $win64 "ue4ss\Mods\AltTabWorkContinuation\Scripts\AltTabWorkContinuationFocus.dll"),
+    (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\enabled.txt"),
+    (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\Scripts\main.lua"),
+    (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\Scripts\slot_limits.lua"),
+    (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\Scripts\equipment_storage.lua"),
     (Join-Path $win64 "ue4ss\palworld-modpack-state.json"),
     (Join-Path $win64 "arquivo-preservado.txt")
 )
@@ -58,7 +62,7 @@ foreach ($path in $required) {
 
 $state = Get-Content -LiteralPath (Join-Path $win64 "ue4ss\palworld-modpack-state.json") -Raw | ConvertFrom-Json
 if ($state.version -ne $ModpackVersion) { throw "Versão instalada incorreta: $($state.version)" }
-if ($state.managedFiles.Count -lt 14) { throw "Lista de arquivos gerenciados incompleta." }
+if ($state.managedFiles.Count -lt 24) { throw "Lista de arquivos gerenciados incompleta." }
 
 $protectedHash = (Get-FileHash -LiteralPath (Join-Path $win64 "ue4ss\UE4SS.dll") -Algorithm SHA256).Hash
 $info = [Diagnostics.ProcessStartInfo]::new()

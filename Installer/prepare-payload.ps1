@@ -50,6 +50,7 @@ $sourceWin64 = Join-Path $GameRoot 'Pal\Binaries\Win64'
 $sourceUe4ss = Join-Path $sourceWin64 'ue4ss'
 $sourceMod = Join-Path $projectRoot 'Scripts'
 $sourceAltTab = Join-Path $projectRoot 'Mods\AltTabWorkContinuation'
+$sourceAccessorySlots = Join-Path $projectRoot 'Mods\AccessorySlotsResearch'
 
 foreach ($required in @(
     (Join-Path $sourceWin64 'dwmapi.dll'),
@@ -65,7 +66,18 @@ foreach ($required in @(
     (Join-Path $sourceAltTab 'enabled.txt'),
     (Join-Path $sourceAltTab 'Scripts\main.lua'),
     (Join-Path $sourceAltTab 'Scripts\continuation_policy.lua'),
-    (Join-Path $sourceAltTab 'Scripts\AltTabWorkContinuationFocus.dll')
+    (Join-Path $sourceAltTab 'Scripts\AltTabWorkContinuationFocus.dll'),
+    (Join-Path $sourceAccessorySlots 'enabled.txt'),
+    (Join-Path $sourceAccessorySlots 'Scripts\main.lua'),
+    (Join-Path $sourceAccessorySlots 'Scripts\config.lua'),
+    (Join-Path $sourceAccessorySlots 'Scripts\slot_limits.lua'),
+    (Join-Path $sourceAccessorySlots 'Scripts\equipment_storage.lua'),
+    (Join-Path $sourceAccessorySlots 'Scripts\slot_expander.lua'),
+    (Join-Path $sourceAccessorySlots 'Scripts\slot_refresher.lua'),
+    (Join-Path $sourceAccessorySlots 'Scripts\slot_visual_style.lua'),
+    (Join-Path $sourceAccessorySlots 'Scripts\slot_probe.lua'),
+    (Join-Path $sourceAccessorySlots 'Scripts\ui_probe.lua'),
+    (Join-Path $sourceAccessorySlots 'Scripts\session_log.lua')
 )) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
         throw "Arquivo obrigatório ausente: $required"
@@ -86,7 +98,9 @@ $targetMod = Join-Path $targetUe4ss 'Mods\HoverTransfer'
 $targetScripts = Join-Path $targetMod 'Scripts'
 $targetAltTab = Join-Path $targetUe4ss 'Mods\AltTabWorkContinuation'
 $targetAltTabScripts = Join-Path $targetAltTab 'Scripts'
-New-Item -ItemType Directory -Force -Path $targetScripts, $targetAltTabScripts | Out-Null
+$targetAccessorySlots = Join-Path $targetUe4ss 'Mods\AccessorySlotsResearch'
+$targetAccessoryScripts = Join-Path $targetAccessorySlots 'Scripts'
+New-Item -ItemType Directory -Force -Path $targetScripts, $targetAltTabScripts, $targetAccessoryScripts | Out-Null
 
 Copy-Item -LiteralPath (Join-Path $sourceWin64 'dwmapi.dll') -Destination (Join-Path $payloadRoot 'dwmapi.dll')
 foreach ($name in @('UE4SS.dll', 'UE4SS-settings.ini', 'MemberVariableLayout.ini', 'LICENSE')) {
@@ -100,9 +114,14 @@ Copy-Item -LiteralPath (Join-Path $sourceAltTab 'enabled.txt') -Destination (Joi
 foreach ($name in @('main.lua', 'continuation_policy.lua', 'AltTabWorkContinuationFocus.dll')) {
     Copy-Item -LiteralPath (Join-Path $sourceAltTab "Scripts\$name") -Destination (Join-Path $targetAltTabScripts $name)
 }
+Copy-Item -LiteralPath (Join-Path $sourceAccessorySlots 'enabled.txt') -Destination (Join-Path $targetAccessorySlots 'enabled.txt')
+Get-ChildItem -LiteralPath (Join-Path $sourceAccessorySlots 'Scripts') -Filter '*.lua' -File |
+    ForEach-Object {
+        Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $targetAccessoryScripts $_.Name)
+    }
 
 $unexpectedMods = Get-ChildItem -LiteralPath (Join-Path $targetUe4ss 'Mods') -Directory |
-    Where-Object Name -notin @('HoverTransfer', 'AltTabWorkContinuation')
+    Where-Object Name -notin @('HoverTransfer', 'AltTabWorkContinuation', 'AccessorySlotsResearch')
 if ($unexpectedMods) {
     throw "O payload contém mods inesperados: $($unexpectedMods.Name -join ', ')"
 }

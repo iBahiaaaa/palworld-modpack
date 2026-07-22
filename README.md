@@ -29,6 +29,12 @@ cliques nem teclas simuladas ao Windows.
 Mantém a fabricação manual ativa ao usar `Alt+Tab`. Também tenta preservar o
 trabalho ao abrir o inventário e oferece o modo de interação contínua do `F`.
 
+### Accessory Slots Research
+
+Expande os acessórios para 10 slots totais: quatro vanilla e seis adicionais.
+Os slots extras equipam, atualizam o visual e permanecem salvos no servidor.
+Todos os jogadores devem manter a mesma versão instalada pelo launcher.
+
 ## Segurança da atualização
 
 - O repositório de atualização é fixo em `iBahiaaaa/palworld-modpack`.
@@ -44,15 +50,16 @@ trabalho ao abrir o inventário e oferece o modo de interação contínua do `F`
 - `Release/`: criação do pacote e publicação das Releases.
 - `Native/`: auxiliar nativo do Hover Transfer.
 - `Mods/AltTabWorkContinuation/`: código e auxiliar nativo do mod de fabricação.
+- `Mods/AccessorySlotsResearch/`: expansão dos slots de acessório.
 - `Scripts/`: código Lua, configuração, compilação e validação do mod.
 - `Installer/`: instalador antigo, mantido como alternativa.
 
 ## Gerar e testar
 
 ```powershell
-.\Release\build-modpack-package.ps1 -Version 0.4.0
+.\Release\build-modpack-package.ps1 -Version 0.5.0
 .\Launcher\build-launcher.ps1 -Version 1.0.0
-.\Launcher\test-launcher.ps1 -ModpackVersion 0.4.0
+.\Launcher\test-launcher.ps1 -ModpackVersion 0.5.0
 .\Launcher\test-modpack-update.ps1
 ```
 

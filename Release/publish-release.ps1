@@ -46,6 +46,7 @@ $notes = @"
 - Atualização automática pelo launcher.
 - Hover Transfer incluído.
 - AltTab Work Continuation incluído.
+- Accessory Slots Research incluído com 10 slots totais.
 - UE4SS incluído no pacote de cliente.
 - Verificação de integridade por SHA-256.
 
