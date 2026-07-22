@@ -2,7 +2,8 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$ModpackVersion,
     [string]$LauncherVersion = "1.0.0",
-    [string]$GameRoot
+    [string]$GameRoot,
+    [switch]$SkipBuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -15,11 +16,13 @@ if (-not (Test-Path -LiteralPath $gh)) { throw "GitHub CLI não encontrado." }
 & $gh auth status | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "Faça login com: gh auth login" }
 
-$packageArguments = @{ Version = $ModpackVersion }
-if (-not [string]::IsNullOrWhiteSpace($GameRoot)) { $packageArguments.GameRoot = $GameRoot }
-& (Join-Path $PSScriptRoot "build-modpack-package.ps1") @packageArguments
-& (Join-Path $projectRoot "Launcher\build-launcher.ps1") -Version $LauncherVersion
-& (Join-Path $projectRoot "Launcher\test-launcher.ps1") -ModpackVersion $ModpackVersion -LauncherVersion $LauncherVersion
+if (-not $SkipBuild) {
+    $packageArguments = @{ Version = $ModpackVersion }
+    if (-not [string]::IsNullOrWhiteSpace($GameRoot)) { $packageArguments.GameRoot = $GameRoot }
+    & (Join-Path $PSScriptRoot "build-modpack-package.ps1") @packageArguments
+    & (Join-Path $projectRoot "Launcher\build-launcher.ps1") -Version $LauncherVersion
+    & (Join-Path $projectRoot "Launcher\test-launcher.ps1") -ModpackVersion $ModpackVersion -LauncherVersion $LauncherVersion
+}
 
 $releases = Join-Path $projectRoot "Releases"
 $assets = @(
@@ -32,8 +35,10 @@ foreach ($asset in $assets) {
     if (-not (Test-Path -LiteralPath $asset -PathType Leaf)) { throw "Asset ausente: $asset" }
 }
 
-& $gh release view $tag --repo $repository *> $null
-if ($LASTEXITCODE -eq 0) { throw "A Release $tag já existe. Use uma versão nova." }
+$releaseCheck = Start-Process -FilePath $gh `
+    -ArgumentList @("release", "view", $tag, "--repo", $repository) `
+    -Wait -PassThru -WindowStyle Hidden
+if ($releaseCheck.ExitCode -eq 0) { throw "A Release $tag já existe. Use uma versão nova." }
 
 $notes = @"
 ## Palworld Modpack $ModpackVersion

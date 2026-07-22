@@ -60,6 +60,13 @@ Atualize o número da versão e execute:
 O script monta o pacote, compila o launcher, executa o teste completo e cria a
 Release somente se todas as etapas forem concluídas.
 
+Se uma publicação falhar somente durante o upload, repita sem recompilar os
+arquivos que já passaram nos testes:
+
+```powershell
+.\Release\publish-release.ps1 -ModpackVersion 0.3.1 -SkipBuild
+```
+
 ## Licenças
 
 O código deste projeto usa a licença MIT. O pacote distribui o UE4SS com a cópia
