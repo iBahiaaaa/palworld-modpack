@@ -1,7 +1,7 @@
 local continuationPolicy = require("continuation_policy")
 
 local MOD_NAME = "AltTabWorkContinuation"
-local MOD_VERSION = "0.4.0"
+local MOD_VERSION = "0.4.1"
 local EXPECTED_GAME_BUILD = "24181527"
 local HELPER_MODULE_NAME = "AltTabWorkContinuationFocus"
 local EXPECTED_HELPER_SUFFIX = "\\alttabworkcontinuation\\scripts\\alttabworkcontinuationfocus.dll"
@@ -470,7 +470,9 @@ local function onWorkStartResult(context, requestId, result)
     armed = {
         object = candidate.object,
         address = candidate.address,
-        holdMode = candidate.requestedToggle == false,
+        -- Preserve how the interaction started. When the native option is OFF,
+        -- requestedToggle has already been rewritten to true at this point.
+        holdMode = candidate.originalToggle == false,
         forcedToggle = candidate.forcedToggle == true,
         holdReleaseSuppressed = false,
         returnUiPendingGeneration = nil,

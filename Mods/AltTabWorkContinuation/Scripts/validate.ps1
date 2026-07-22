@@ -198,6 +198,12 @@ if ($forcedToggleRewriteCount -ne 1) {
 if ($source -notmatch '(?s)action == 1 and toggle == false and FORCE_HOLD_INTERACTIONS.*?isToggle:set\(true\).*?toggle = true') {
     throw 'The hold-to-toggle rewrite must be limited to ActionType 1 hold interactions.'
 }
+if ($source -notmatch 'holdMode = candidate\.originalToggle == false') {
+    throw 'Forced hold mode must preserve the original native toggle state.'
+}
+if ($source -match 'holdMode = candidate\.requestedToggle == false') {
+    throw 'Forced hold mode must not use the already rewritten toggle state.'
+}
 foreach ($policyFragment in @(
     'options.pendingReturnGeneration == nil',
     'options.restorePending ~= true',

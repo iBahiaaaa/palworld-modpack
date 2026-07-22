@@ -43,7 +43,15 @@ function Invoke-Launcher([string[]]$Arguments) {
 
 Invoke-Launcher @("--apply-local", $gameRoot, $previousPackage, $PreviousVersion, "v$PreviousVersion", $previousChecksum)
 $altTabMarker = Join-Path $win64 "ue4ss\Mods\AltTabWorkContinuation\enabled.txt"
-if (Test-Path -LiteralPath $altTabMarker) { throw "A fixture antiga já contém o AltTab." }
+$altTabMain = Join-Path $win64 "ue4ss\Mods\AltTabWorkContinuation\Scripts\main.lua"
+$previousVersionValue = [Version]$PreviousVersion
+$previousAltTabHash = $null
+if ($previousVersionValue -lt [Version]'0.4.0') {
+    if (Test-Path -LiteralPath $altTabMarker) { throw "A fixture anterior à v0.4.0 já contém o AltTab." }
+} else {
+    if (-not (Test-Path -LiteralPath $altTabMain)) { throw "A fixture v$PreviousVersion não contém o AltTab esperado." }
+    $previousAltTabHash = (Get-FileHash -LiteralPath $altTabMain -Algorithm SHA256).Hash
+}
 $hoverMarker = Join-Path $win64 "ue4ss\Mods\HoverTransfer\enabled.txt"
 if (-not (Test-Path -LiteralPath $hoverMarker)) { throw "Hover Transfer ausente na versão anterior." }
 $externalFile = Join-Path $win64 "ue4ss\Mods\OutroMod\arquivo-preservado.txt"
@@ -55,13 +63,17 @@ Invoke-Launcher @("--apply-local", $gameRoot, $newPackage, $NewVersion, "v$NewVe
 $required = @(
     $hoverMarker,
     $altTabMarker,
-    (Join-Path $win64 "ue4ss\Mods\AltTabWorkContinuation\Scripts\main.lua"),
+    $altTabMain,
     (Join-Path $win64 "ue4ss\Mods\AltTabWorkContinuation\Scripts\continuation_policy.lua"),
     (Join-Path $win64 "ue4ss\Mods\AltTabWorkContinuation\Scripts\AltTabWorkContinuationFocus.dll"),
     $externalFile
 )
 foreach ($path in $required) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Arquivo esperado ausente: $path" }
+}
+if ($previousAltTabHash) {
+    $newAltTabHash = (Get-FileHash -LiteralPath $altTabMain -Algorithm SHA256).Hash
+    if ($newAltTabHash -eq $previousAltTabHash) { throw "O código do AltTab não foi atualizado." }
 }
 
 $statePath = Join-Path $win64 "ue4ss\palworld-modpack-state.json"

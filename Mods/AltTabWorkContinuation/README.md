@@ -2,7 +2,7 @@
 
 Mod de cliente para manter uma fabricação manual em andamento quando o jogador abre o inventário com `Tab` ou tira o foco do Palworld com `Alt+Tab`/tecla Windows.
 
-Version: `0.4.0`
+Version: `0.4.1`
 
 Build local alvo do Palworld: `24181527`
 
@@ -74,7 +74,7 @@ Instalar, atualizar ou remover exige fechar completamente o Palworld, porque o h
 | Arquivo | SHA-256 |
 |---|---|
 | `Native/pal_focus.c` | `3A39024D8AE46B5754C05402A7596EE53D44FC92A74BAEC2A0175B1F5A934607` |
-| `Scripts/main.lua` | `43F91A13522F121DE9CF50669C178D177D4E5C322FBD7022AAAE816026A7BD29` |
+| `Scripts/main.lua` | `4226081812030D14A43EB0ACF4B0124F022D42F6BA80B9B1F545CEFE051D2011` |
 | `Scripts/continuation_policy.lua` | `3764C8C32F73CDE9CB18783276AA9BD173C8850B85B5DFC3C2EF67F0C6E8D708` |
 | `Scripts/AltTabWorkContinuationFocus.dll` | `B3F2197986152C0ADE735CB1680CBB89E9BCBF3D46F7E170B3920D756EC758A1` |
 
