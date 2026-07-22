@@ -1,0 +1,6 @@
+Mods/AltTabWorkContinuation/Native/*.c text eol=lf
+Mods/AltTabWorkContinuation/Scripts/*.lua text eol=lf
+Mods/AltTabWorkContinuation/Scripts/*.ps1 text eol=lf
+Mods/AltTabWorkContinuation/build/*.json text eol=lf
+Mods/AltTabWorkContinuation/*.md text eol=lf
+Mods/AltTabWorkContinuation/*.txt text eol=lf

@@ -1,4 +1,4 @@
-﻿{
+{
     "source":  "Native/pal_focus.c",
     "sourceSha256":  "3A39024D8AE46B5754C05402A7596EE53D44FC92A74BAEC2A0175B1F5A934607",
     "output":  "Scripts/AltTabWorkContinuationFocus.dll",
