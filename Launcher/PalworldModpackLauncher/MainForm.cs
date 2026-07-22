@@ -9,16 +9,21 @@ internal sealed class MainForm : Form
     private readonly Label statusLabel;
     private readonly ProgressBar progressBar;
     private readonly Button checkButton;
-    private readonly Button playButton;
+    private readonly Button vanillaButton;
+    private readonly Button moddedButton;
     private readonly UpdateCoordinator coordinator = new();
+    private readonly LauncherSelfUpdater selfUpdater = new();
+    private readonly GameSessionManager gameSession = new();
     private CancellationTokenSource? operationCancellation;
+    private bool closingForUpdate;
+    private bool sessionCloseNoticeShown;
 
     public MainForm()
     {
         Text = "Palworld Modpack - Launcher";
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(760, 470);
-        MinimumSize = new Size(680, 450);
+        ClientSize = new Size(800, 490);
+        MinimumSize = new Size(720, 470);
         BackColor = Theme.Window;
         ForeColor = Theme.Text;
         Font = new Font("Segoe UI", 10F);
@@ -35,7 +40,7 @@ internal sealed class MainForm : Form
         };
         var subtitle = new Label
         {
-            Text = "Atualiza seus mods automaticamente antes de abrir o jogo.",
+            Text = "Pela Steam o jogo fica vanilla. Por aqui, ele inicia com o modpack.",
             AutoSize = true,
             ForeColor = Theme.Muted,
             Margin = new Padding(2, 0, 0, 22),
@@ -126,13 +131,17 @@ internal sealed class MainForm : Form
             FlowDirection = FlowDirection.RightToLeft,
             WrapContents = false,
         };
-        playButton = Theme.Button("Jogar Palworld", primary: true);
-        playButton.Enabled = false;
-        playButton.Click += async (_, _) => await PlayAsync();
+        moddedButton = Theme.Button("Jogar com mods", primary: true);
+        moddedButton.Enabled = false;
+        moddedButton.Click += async (_, _) => await PlayModdedAsync();
+        vanillaButton = Theme.Button("Jogar vanilla");
+        vanillaButton.Enabled = false;
+        vanillaButton.Click += (_, _) => PlayVanilla();
         checkButton = Theme.Button("Verificar atualização");
         checkButton.Enabled = false;
         checkButton.Click += async (_, _) => await CheckAndUpdateAsync(automatic: false);
-        actions.Controls.Add(playButton);
+        actions.Controls.Add(moddedButton);
+        actions.Controls.Add(vanillaButton);
         actions.Controls.Add(checkButton);
 
         content.Controls.Add(title, 0, 0);
@@ -143,16 +152,9 @@ internal sealed class MainForm : Form
         content.Controls.Add(actions, 0, 5);
         Controls.Add(content);
 
-        Shown += async (_, _) =>
-        {
-            Detect();
-            if (ResolvedGameRoot is not null) await CheckAndUpdateAsync(automatic: true);
-        };
-        FormClosed += (_, _) =>
-        {
-            operationCancellation?.Cancel();
-            coordinator.Dispose();
-        };
+        Shown += async (_, _) => await InitializeAsync();
+        FormClosing += HandleFormClosing;
+        FormClosed += (_, _) => Cleanup();
     }
 
     private static TableLayoutPanel CreateLayout()
@@ -175,6 +177,19 @@ internal sealed class MainForm : Form
     }
 
     private string? ResolvedGameRoot => PalworldLocator.Resolve(pathTextBox.Text);
+
+    private async Task InitializeAsync()
+    {
+        Detect();
+        var root = ResolvedGameRoot;
+        if (root is null) return;
+
+        var vanilla = gameSession.EnsureVanilla(root, coordinator.ReadState(root));
+        if (!vanilla.Success) SetStatus(vanilla.Message, false);
+
+        if (await CheckLauncherUpdateAsync()) return;
+        await CheckAndUpdateAsync(automatic: true);
+    }
 
     private void Detect()
     {
@@ -205,7 +220,8 @@ internal sealed class MainForm : Form
         var root = ResolvedGameRoot;
         var valid = root is not null;
         checkButton.Enabled = valid;
-        playButton.Enabled = valid;
+        vanillaButton.Enabled = valid;
+        moddedButton.Enabled = valid;
         if (!valid)
         {
             versionLabel.Text = "Versão instalada: —";
@@ -216,38 +232,113 @@ internal sealed class MainForm : Form
         LauncherSettingsStore.Save(root!);
         var state = coordinator.ReadState(root!);
         versionLabel.Text = "Versão instalada: " + (state?.Version ?? "não instalada");
-        SetStatus($"Palworld encontrado em:\n{root}", true);
+        SetStatus($"Palworld encontrado em:\n{root}\nSteam: vanilla | Launcher: com mods", true);
     }
 
-    private async Task PlayAsync()
-    {
-        if (ResolvedGameRoot is null) return;
-        await CheckAndUpdateAsync(automatic: true);
-        if (!UpdateCoordinator.IsPalworldRunning()) UpdateCoordinator.LaunchGame();
-    }
-
-    private async Task CheckAndUpdateAsync(bool automatic)
+    private async Task PlayModdedAsync()
     {
         var root = ResolvedGameRoot;
         if (root is null) return;
-        if (operationCancellation is not null) return;
+        if (!await CheckAndUpdateAsync(automatic: true)) return;
 
         operationCancellation = new CancellationTokenSource();
-        SetBusy(true, "Consultando a última versão no GitHub...");
+        SetBusy(true, "Ativando os mods e iniciando o Palworld...");
+        try
+        {
+            var result = await gameSession.LaunchModdedAsync(
+                root,
+                () => BeginInvoke(new Action(() => WindowState = FormWindowState.Minimized)),
+                operationCancellation.Token);
+            SetStatus(result.Message, result.Success);
+            if (!result.Success)
+                MessageBox.Show(this, result.Message, "Não foi possível jogar com mods",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            operationCancellation.Dispose();
+            operationCancellation = null;
+            SetBusy(false, statusLabel.Text, statusLabel.ForeColor == Theme.Accent);
+        }
+    }
+
+    private void PlayVanilla()
+    {
+        var root = ResolvedGameRoot;
+        if (root is null) return;
+        var result = gameSession.LaunchVanilla(root, coordinator.ReadState(root));
+        SetStatus(result.Message, result.Success);
+        if (!result.Success)
+            MessageBox.Show(this, result.Message, "Não foi possível jogar vanilla",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+
+    private async Task<bool> CheckLauncherUpdateAsync()
+    {
+        if (operationCancellation is not null) return false;
+        operationCancellation = new CancellationTokenSource();
+        SetBusy(true, "Verificando atualização do launcher...");
+        try
+        {
+            var update = await selfUpdater.CheckAsync(operationCancellation.Token);
+            if (update is null) return false;
+            if (GameSessionManager.IsPalworldRunning())
+            {
+                SetStatus($"Launcher {update.Version.ToString(3)} disponível. Feche o Palworld para atualizar.", false);
+                return false;
+            }
+
+            SetBusy(true, $"Baixando o launcher {update.Version.ToString(3)}...", showProgress: true);
+            var progress = new Progress<int>(value => progressBar.Value = value);
+            var result = await selfUpdater.DownloadAndRestartAsync(update, progress, operationCancellation.Token);
+            SetStatus(result.Message, result.Success);
+            if (!result.Success) return false;
+
+            closingForUpdate = true;
+            BeginInvoke(new Action(Close));
+            return true;
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+        {
+            SetStatus("Não foi possível verificar o launcher agora. Continuando com a versão atual.", false);
+            return false;
+        }
+        catch (Exception exception)
+        {
+            SetStatus("Não foi possível atualizar o launcher agora: " + exception.Message, false);
+            return false;
+        }
+        finally
+        {
+            operationCancellation.Dispose();
+            operationCancellation = null;
+            if (!closingForUpdate)
+                SetBusy(false, statusLabel.Text, statusLabel.ForeColor == Theme.Accent);
+        }
+    }
+
+    private async Task<bool> CheckAndUpdateAsync(bool automatic)
+    {
+        var root = ResolvedGameRoot;
+        if (root is null) return false;
+        if (operationCancellation is not null) return false;
+
+        operationCancellation = new CancellationTokenSource();
+        SetBusy(true, "Consultando a última versão do modpack no GitHub...");
         try
         {
             var (latest, needsUpdate) = await coordinator.CheckAsync(root, operationCancellation.Token);
             if (!needsUpdate)
             {
                 versionLabel.Text = $"Versão instalada: {latest.Version.ToString(3)} — atualizada";
-                SetStatus("Seu modpack já está atualizado.", true);
-                return;
+                SetStatus("Seu modpack já está atualizado. Steam permanece vanilla.", true);
+                return true;
             }
 
-            if (UpdateCoordinator.IsPalworldRunning())
+            if (GameSessionManager.IsPalworldRunning())
             {
                 SetStatus($"Atualização {latest.Version.ToString(3)} pendente. Feche o Palworld para instalar.", false);
-                return;
+                return false;
             }
 
             if (!automatic && MessageBox.Show(this,
@@ -257,7 +348,7 @@ internal sealed class MainForm : Form
                     MessageBoxIcon.Question) != DialogResult.Yes)
             {
                 SetStatus("Atualização adiada.", false);
-                return;
+                return true;
             }
 
             SetBusy(true, $"Baixando o modpack {latest.Version.ToString(3)}...", showProgress: true);
@@ -273,18 +364,23 @@ internal sealed class MainForm : Form
             SetStatus(result.Message, result.Success);
             if (!result.Success)
                 MessageBox.Show(this, result.Message, "Falha na atualização", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return result.Success;
         }
         catch (HttpRequestException)
         {
+            var installed = coordinator.ReadState(root) is not null;
             SetStatus("Sem acesso ao GitHub. Você ainda pode jogar com a versão instalada.", false);
+            return installed;
         }
         catch (TaskCanceledException)
         {
             SetStatus("A verificação de atualização foi cancelada.", false);
+            return false;
         }
         catch (Exception exception)
         {
             SetStatus("Não foi possível verificar atualizações: " + exception.Message, false);
+            return coordinator.ReadState(root) is not null;
         }
         finally
         {
@@ -294,11 +390,38 @@ internal sealed class MainForm : Form
         }
     }
 
+    private void HandleFormClosing(object? sender, FormClosingEventArgs eventArgs)
+    {
+        if (closingForUpdate || !gameSession.IsSessionActive) return;
+        if (eventArgs.CloseReason is CloseReason.WindowsShutDown or CloseReason.TaskManagerClosing) return;
+
+        eventArgs.Cancel = true;
+        WindowState = FormWindowState.Minimized;
+        if (sessionCloseNoticeShown) return;
+        sessionCloseNoticeShown = true;
+        MessageBox.Show(this,
+            "O launcher continuará minimizado até o Palworld fechar para desativar os mods com segurança.",
+            "Sessão com mods ativa",
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Information);
+    }
+
+    private void Cleanup()
+    {
+        operationCancellation?.Cancel();
+        var root = ResolvedGameRoot;
+        if (root is not null && !GameSessionManager.IsPalworldRunning())
+            gameSession.EnsureVanilla(root, coordinator.ReadState(root));
+        selfUpdater.Dispose();
+        coordinator.Dispose();
+    }
+
     private void SetBusy(bool busy, string message, bool success = true, bool showProgress = false)
     {
         pathTextBox.Enabled = !busy;
         checkButton.Enabled = !busy && ResolvedGameRoot is not null;
-        playButton.Enabled = !busy && ResolvedGameRoot is not null;
+        vanillaButton.Enabled = !busy && ResolvedGameRoot is not null;
+        moddedButton.Enabled = !busy && ResolvedGameRoot is not null;
         progressBar.Visible = busy && showProgress;
         if (!progressBar.Visible) progressBar.Value = 0;
         SetStatus(message, success);

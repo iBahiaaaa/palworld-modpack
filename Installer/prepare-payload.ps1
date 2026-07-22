@@ -100,9 +100,11 @@ $targetAltTab = Join-Path $targetUe4ss 'Mods\AltTabWorkContinuation'
 $targetAltTabScripts = Join-Path $targetAltTab 'Scripts'
 $targetAccessorySlots = Join-Path $targetUe4ss 'Mods\AccessorySlotsResearch'
 $targetAccessoryScripts = Join-Path $targetAccessorySlots 'Scripts'
-New-Item -ItemType Directory -Force -Path $targetScripts, $targetAltTabScripts, $targetAccessoryScripts | Out-Null
+$targetStoredLoader = Join-Path $payloadRoot 'Palworld-Modpack\loader'
+New-Item -ItemType Directory -Force -Path $targetScripts, $targetAltTabScripts, $targetAccessoryScripts, $targetStoredLoader | Out-Null
 
 Copy-Item -LiteralPath (Join-Path $sourceWin64 'dwmapi.dll') -Destination (Join-Path $payloadRoot 'dwmapi.dll')
+Copy-Item -LiteralPath (Join-Path $sourceWin64 'dwmapi.dll') -Destination (Join-Path $targetStoredLoader 'dwmapi.dll')
 foreach ($name in @('UE4SS.dll', 'UE4SS-settings.ini', 'MemberVariableLayout.ini', 'LICENSE')) {
     Copy-Item -LiteralPath (Join-Path $sourceUe4ss $name) -Destination (Join-Path $targetUe4ss $name)
 }

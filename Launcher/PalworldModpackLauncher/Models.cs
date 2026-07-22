@@ -21,6 +21,14 @@ internal sealed record UpdateInfo(
     ReleaseAsset Package,
     ReleaseAsset Checksum);
 
+internal sealed record LauncherUpdateManifest(string Version);
+
+internal sealed record LauncherUpdateInfo(
+    Version Version,
+    string Tag,
+    ReleaseAsset Executable,
+    ReleaseAsset Checksum);
+
 internal sealed record GitHubRelease(
     [property: JsonPropertyName("tag_name")] string TagName,
     [property: JsonPropertyName("draft")] bool Draft,

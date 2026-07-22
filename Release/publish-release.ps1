@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$ModpackVersion,
-    [string]$LauncherVersion = "1.0.0",
+    [string]$LauncherVersion = "1.1.0",
     [string]$GameRoot,
     [switch]$SkipBuild
 )
@@ -28,6 +28,7 @@ $releases = Join-Path $projectRoot "Releases"
 $assets = @(
     (Join-Path $releases "Palworld-Modpack-Launcher.exe"),
     (Join-Path $releases "Palworld-Modpack-Launcher.exe.sha256"),
+    (Join-Path $releases "launcher-version.json"),
     (Join-Path $releases "palworld-modpack.zip"),
     (Join-Path $releases "palworld-modpack.zip.sha256")
 )
@@ -44,6 +45,8 @@ $notes = @"
 ## Palworld Modpack $ModpackVersion
 
 - Atualização automática pelo launcher.
+- Autoatualização do próprio launcher incluída.
+- Steam inicia o Palworld vanilla; o launcher ativa os mods somente durante a sessão.
 - Hover Transfer incluído.
 - AltTab Work Continuation incluído.
 - Accessory Slots Research incluído com 10 slots totais.

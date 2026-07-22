@@ -1,6 +1,6 @@
 param(
-    [string]$ModpackVersion = "0.5.0",
-    [string]$LauncherVersion = "1.0.0"
+    [string]$ModpackVersion = "0.6.0",
+    [string]$LauncherVersion = "1.1.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -44,7 +44,7 @@ Invoke-Launcher @("--apply-local", (Join-Path $testRoot "SteamLibrary"), $packag
 Invoke-Launcher @("--status", $gameRoot)
 
 $required = @(
-    (Join-Path $win64 "dwmapi.dll"),
+    (Join-Path $win64 "Palworld-Modpack\loader\dwmapi.dll"),
     (Join-Path $win64 "ue4ss\UE4SS.dll"),
     (Join-Path $win64 "ue4ss\Mods\HoverTransfer\enabled.txt"),
     (Join-Path $win64 "ue4ss\Mods\AltTabWorkContinuation\enabled.txt"),
@@ -59,10 +59,28 @@ $required = @(
 foreach ($path in $required) {
     if (-not (Test-Path -LiteralPath $path)) { throw "Arquivo esperado não encontrado: $path" }
 }
+if (Test-Path -LiteralPath (Join-Path $win64 "dwmapi.dll")) { throw "O carregador ficou ativo após a instalação." }
 
 $state = Get-Content -LiteralPath (Join-Path $win64 "ue4ss\palworld-modpack-state.json") -Raw | ConvertFrom-Json
 if ($state.version -ne $ModpackVersion) { throw "Versão instalada incorreta: $($state.version)" }
-if ($state.managedFiles.Count -lt 24) { throw "Lista de arquivos gerenciados incompleta." }
+if ($state.managedFiles.Count -lt 26) { throw "Lista de arquivos gerenciados incompleta." }
+
+Invoke-Launcher @("--activate-mods", $gameRoot)
+if (-not (Test-Path -LiteralPath (Join-Path $win64 "dwmapi.dll"))) { throw "Os mods não foram ativados." }
+Invoke-Launcher @("--disable-mods", $gameRoot)
+if (Test-Path -LiteralPath (Join-Path $win64 "dwmapi.dll")) { throw "Os mods não voltaram ao modo vanilla." }
+
+$conflictingLoader = Join-Path $win64 "dwmapi.dll"
+Set-Content -LiteralPath $conflictingLoader -Value "carregador externo de teste" -Encoding ascii
+$conflictInfo = [Diagnostics.ProcessStartInfo]::new()
+$conflictInfo.FileName = $launcher
+$conflictInfo.Arguments = '"--disable-mods" "' + $gameRoot.Replace('"', '\"') + '"'
+$conflictInfo.UseShellExecute = $false
+$conflictProcess = [Diagnostics.Process]::Start($conflictInfo)
+$conflictProcess.WaitForExit()
+if ($conflictProcess.ExitCode -eq 0) { throw "Um carregador externo foi removido sem bloqueio." }
+if (-not (Test-Path -LiteralPath $conflictingLoader)) { throw "O carregador externo não foi preservado." }
+Remove-Item -LiteralPath $conflictingLoader -Force
 
 $protectedHash = (Get-FileHash -LiteralPath (Join-Path $win64 "ue4ss\UE4SS.dll") -Algorithm SHA256).Hash
 $info = [Diagnostics.ProcessStartInfo]::new()

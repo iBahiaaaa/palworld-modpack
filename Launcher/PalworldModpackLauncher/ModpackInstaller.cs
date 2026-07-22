@@ -105,7 +105,11 @@ internal sealed class ModpackInstaller
             Directory.CreateDirectory(Path.GetDirectoryName(statePath)!);
             File.WriteAllText(statePath, JsonSerializer.Serialize(state, JsonOptions));
 
-            return new OperationResult(true, $"Modpack {version.ToString(3)} instalado com sucesso.");
+            var vanilla = new ModActivationManager().EnsureVanilla(gameRoot, state);
+            if (!vanilla.Success) throw new InvalidDataException(vanilla.Message);
+
+            return new OperationResult(true,
+                $"Modpack {version.ToString(3)} instalado com sucesso. A Steam permanece em modo vanilla.");
         }
         catch (Exception exception)
         {
@@ -155,6 +159,10 @@ internal sealed class ModpackInstaller
                 "ue4ss/Mods/AccessorySlotsResearch/Scripts/slot_refresher.lua",
                 "ue4ss/Mods/AccessorySlotsResearch/Scripts/slot_visual_style.lua",
             });
+        }
+        if (packageVersion >= new Version(0, 6, 0))
+        {
+            required.Add("Palworld-Modpack/loader/dwmapi.dll");
         }
         var missing = required.Where(file => !set.Contains(file)).ToArray();
         if (missing.Length > 0)

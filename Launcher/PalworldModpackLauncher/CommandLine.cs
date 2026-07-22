@@ -11,6 +11,10 @@ internal static class CommandLine
                 "--apply-local" => ApplyLocal(args),
                 "--status" => Status(args),
                 "--check-release" => CheckRelease().GetAwaiter().GetResult(),
+                "--check-launcher-release" => CheckLauncherRelease().GetAwaiter().GetResult(),
+                "--activate-mods" => SetModState(args, activate: true),
+                "--disable-mods" => SetModState(args, activate: false),
+                "--replace-launcher" => LauncherSelfUpdater.ReplaceAndRestart(args),
                 _ => Fail("Comando desconhecido."),
             };
         }
@@ -46,6 +50,26 @@ internal static class CommandLine
         var update = await client.GetLatestAsync();
         Console.WriteLine($"{update.Version.ToString(3)}|{update.Package.Name}|{update.Package.Size}");
         return 0;
+    }
+
+    private static async Task<int> CheckLauncherRelease()
+    {
+        using var client = new GitHubReleaseClient();
+        var update = await client.GetLatestLauncherAsync();
+        if (update is null) return Fail("A Release ainda não publica atualizações do launcher.");
+        Console.WriteLine($"{update.Version.ToString(3)}|{update.Executable.Name}|{update.Executable.Size}");
+        return 0;
+    }
+
+    private static int SetModState(string[] args, bool activate)
+    {
+        if (args.Length != 2) return Fail($"Uso: {args[0]} <pasta>");
+        var manager = new ModActivationManager();
+        var result = activate
+            ? manager.Activate(args[1])
+            : manager.EnsureVanilla(args[1], new ModpackInstaller().ReadState(args[1]));
+        Console.WriteLine(result.Message);
+        return result.Success ? 0 : 1;
     }
 
     private static int Fail(string message)

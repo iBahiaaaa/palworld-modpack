@@ -1,8 +1,8 @@
 # Palworld Modpack
 
 Modpack de cliente para o servidor de amigos do Bahiaaaa. O launcher consulta as
-[GitHub Releases](https://github.com/iBahiaaaa/palworld-modpack/releases), instala
-atualizações verificadas e abre o Palworld pela Steam.
+[GitHub Releases](https://github.com/iBahiaaaa/palworld-modpack/releases), atualiza
+o modpack e o próprio launcher e abre o Palworld pela Steam.
 
 ## Para jogadores
 
@@ -10,11 +10,19 @@ atualizações verificadas e abre o Palworld pela Steam.
 2. Feche o Palworld.
 3. Abra o launcher e confirme a pasta detectada.
 4. Aguarde a atualização automática.
-5. Clique em **Jogar Palworld**.
+5. Clique em **Jogar com mods**.
 
 O launcher aceita a pasta da Steam, uma biblioteca Steam, a pasta do Palworld ou
 a pasta `Win64`. Se o GitHub estiver indisponível, ele permite abrir o jogo com a
 versão que já está instalada.
+
+O carregador dos mods fica desativado por padrão. Abrir o Palworld diretamente
+pela Steam inicia o jogo vanilla. O botão **Jogar com mods** ativa o UE4SS apenas
+durante aquela sessão, mantém o launcher minimizado e volta ao modo vanilla
+quando o jogo fecha. O botão **Jogar vanilla** também está disponível no launcher.
+
+A versão 1.1.0 precisa ser baixada manualmente uma vez. Depois dela, novas versões
+do próprio launcher são baixadas, verificadas por SHA-256 e aplicadas automaticamente.
 
 ## Mods incluídos
 
@@ -40,6 +48,7 @@ Todos os jogadores devem manter a mesma versão instalada pelo launcher.
 - O repositório de atualização é fixo em `iBahiaaaa/palworld-modpack`.
 - O pacote é baixado por HTTPS diretamente do GitHub.
 - O SHA-256 é validado antes de qualquer arquivo ser alterado.
+- O executável novo do launcher também é validado antes da substituição.
 - Caminhos inseguros dentro do ZIP são recusados.
 - Arquivos substituídos recebem backup.
 - Somente arquivos listados pelo modpack são gerenciados; outros mods são preservados.
@@ -57,10 +66,11 @@ Todos os jogadores devem manter a mesma versão instalada pelo launcher.
 ## Gerar e testar
 
 ```powershell
-.\Release\build-modpack-package.ps1 -Version 0.5.0
-.\Launcher\build-launcher.ps1 -Version 1.0.0
-.\Launcher\test-launcher.ps1 -ModpackVersion 0.5.0
+.\Release\build-modpack-package.ps1 -Version 0.6.0
+.\Launcher\build-launcher.ps1 -Version 1.1.0
+.\Launcher\test-launcher.ps1 -ModpackVersion 0.6.0
 .\Launcher\test-modpack-update.ps1
+.\Launcher\test-self-update.ps1 -LauncherVersion 1.1.0
 ```
 
 ## Publicar uma atualização
@@ -68,7 +78,7 @@ Todos os jogadores devem manter a mesma versão instalada pelo launcher.
 Atualize o número da versão e execute:
 
 ```powershell
-.\Release\publish-release.ps1 -ModpackVersion 0.3.1
+.\Release\publish-release.ps1 -ModpackVersion 0.6.0 -LauncherVersion 1.1.0
 ```
 
 O script monta o pacote, compila o launcher, executa o teste completo e cria a
@@ -78,7 +88,7 @@ Se uma publicação falhar somente durante o upload, repita sem recompilar os
 arquivos que já passaram nos testes:
 
 ```powershell
-.\Release\publish-release.ps1 -ModpackVersion 0.3.1 -SkipBuild
+.\Release\publish-release.ps1 -ModpackVersion 0.6.0 -LauncherVersion 1.1.0 -SkipBuild
 ```
 
 ## Licenças

@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "1.0.0"
+    [string]$Version = "1.1.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -19,5 +19,7 @@ Copy-Item -LiteralPath $source -Destination $stable -Force
 
 $hash = (Get-FileHash -LiteralPath $stable -Algorithm SHA256).Hash
 Set-Content -LiteralPath "$stable.sha256" -Value "$hash  Palworld-Modpack-Launcher.exe" -Encoding ascii
+$manifest = [ordered]@{ version = $Version }
+$manifest | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $releases 'launcher-version.json') -Encoding utf8
 Write-Host "Launcher gerado: $stable"
 Write-Host "SHA256: $hash"

@@ -1,6 +1,6 @@
 param(
-    [string]$PreviousVersion = "0.4.1",
-    [string]$NewVersion = "0.5.0"
+    [string]$PreviousVersion = "0.5.0",
+    [string]$NewVersion = "0.6.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -77,6 +77,7 @@ $required = @(
     (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\Scripts\equipment_storage.lua"),
     (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\Scripts\slot_expander.lua"),
     (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\Scripts\slot_refresher.lua"),
+    (Join-Path $win64 "Palworld-Modpack\loader\dwmapi.dll"),
     $externalFile
 )
 foreach ($path in $required) {
@@ -89,6 +90,7 @@ if ($previousAltTabHash) {
 $statePath = Join-Path $win64 "ue4ss\palworld-modpack-state.json"
 $state = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
 if ($state.version -ne $NewVersion) { throw "Versão final incorreta: $($state.version)" }
-if ($state.managedFiles.Count -lt 24) { throw "Arquivos gerenciados incompletos: $($state.managedFiles.Count)" }
+if ($state.managedFiles.Count -lt 26) { throw "Arquivos gerenciados incompletos: $($state.managedFiles.Count)" }
+if (Test-Path -LiteralPath (Join-Path $win64 "dwmapi.dll")) { throw "A atualização deixou os mods ativos para a Steam." }
 
 Write-Host "Atualização simulada v$PreviousVersion -> v$NewVersion concluída."
