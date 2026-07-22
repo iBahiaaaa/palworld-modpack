@@ -1,0 +1,17 @@
+build/
+Releases/*.exe
+Releases/*.zip
+Releases/*.sha256
+Releases/*.txt
+Installer/HoverTransferInstaller/bin/
+Installer/HoverTransferInstaller/obj/
+Installer/HoverTransferInstaller/Payload.zip
+Installer/payload-staging/
+Installer/publish/
+Installer/test-output/
+Launcher/PalworldModpackLauncher/bin/
+Launcher/PalworldModpackLauncher/obj/
+Launcher/publish/
+Launcher/test-output/
+Release/staging/
+*.log
