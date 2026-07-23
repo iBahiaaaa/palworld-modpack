@@ -318,11 +318,6 @@ internal sealed class MainForm : Form
         {
             var update = await selfUpdater.CheckAsync(operationCancellation.Token);
             if (update is null) return false;
-            if (GameSessionManager.IsPalworldRunning())
-            {
-                SetStatus($"Launcher {update.Version.ToString(3)} disponível. Feche o Palworld para atualizar.", false);
-                return false;
-            }
 
             SetBusy(true, $"Baixando o launcher {update.Version.ToString(3)}...", showProgress: true);
             var progress = new Progress<int>(value => progressBar.Value = value);

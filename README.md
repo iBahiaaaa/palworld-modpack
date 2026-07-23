@@ -27,6 +27,8 @@ usar **Jogar com mods** novamente.
 
 A versão 1.1.0 precisa ser baixada manualmente uma vez. Depois dela, novas versões
 do próprio launcher são baixadas, verificadas por SHA-256 e aplicadas automaticamente.
+O executável do launcher pode ser atualizado mesmo com o Palworld aberto. Apenas
+as atualizações dos arquivos do modpack aguardam o fechamento do jogo.
 
 ## Mods incluídos
 
@@ -70,11 +72,11 @@ Todos os jogadores devem manter a mesma versão instalada pelo launcher.
 ## Gerar e testar
 
 ```powershell
-.\Release\build-modpack-package.ps1 -Version 0.6.1
-.\Launcher\build-launcher.ps1 -Version 1.2.0
-.\Launcher\test-launcher.ps1 -ModpackVersion 0.6.1
+.\Release\build-modpack-package.ps1 -Version 0.6.2
+.\Launcher\build-launcher.ps1 -Version 1.3.0
+.\Launcher\test-launcher.ps1 -ModpackVersion 0.6.2
 .\Launcher\test-modpack-update.ps1
-.\Launcher\test-self-update.ps1 -LauncherVersion 1.2.0
+.\Launcher\test-self-update.ps1 -LauncherVersion 1.3.0
 ```
 
 ## Publicar uma atualização
@@ -82,7 +84,7 @@ Todos os jogadores devem manter a mesma versão instalada pelo launcher.
 Atualize o número da versão e execute:
 
 ```powershell
-.\Release\publish-release.ps1 -ModpackVersion 0.6.1 -LauncherVersion 1.2.0
+.\Release\publish-release.ps1 -ModpackVersion 0.6.2 -LauncherVersion 1.3.0
 ```
 
 O script monta o pacote, compila o launcher, executa o teste completo e cria a
@@ -92,7 +94,7 @@ Se uma publicação falhar somente durante o upload, repita sem recompilar os
 arquivos que já passaram nos testes:
 
 ```powershell
-.\Release\publish-release.ps1 -ModpackVersion 0.6.1 -LauncherVersion 1.2.0 -SkipBuild
+.\Release\publish-release.ps1 -ModpackVersion 0.6.2 -LauncherVersion 1.3.0 -SkipBuild
 ```
 
 ## Licenças

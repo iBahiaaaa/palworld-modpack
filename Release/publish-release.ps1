@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$ModpackVersion,
-    [string]$LauncherVersion = "1.2.0",
+    [string]$LauncherVersion = "1.3.0",
     [string]$GameRoot,
     [switch]$SkipBuild
 )
@@ -46,6 +46,7 @@ $notes = @"
 
 - Atualização automática pelo launcher.
 - Autoatualização do próprio launcher incluída.
+- O launcher pode atualizar seu executável mesmo com o Palworld aberto.
 - Steam inicia o Palworld vanilla; o launcher ativa os mods somente durante a sessão.
 - Opção para remover o modpack com backup automático.
 - Hover Transfer incluído.

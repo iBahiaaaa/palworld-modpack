@@ -1,5 +1,5 @@
 param(
-    [string]$LauncherVersion = "1.2.0"
+    [string]$LauncherVersion = "1.3.0"
 )
 
 $ErrorActionPreference = "Stop"
