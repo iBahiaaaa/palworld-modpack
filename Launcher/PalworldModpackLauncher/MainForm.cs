@@ -9,11 +9,13 @@ internal sealed class MainForm : Form
     private readonly Label statusLabel;
     private readonly ProgressBar progressBar;
     private readonly Button checkButton;
+    private readonly Button removeButton;
     private readonly Button vanillaButton;
     private readonly Button moddedButton;
     private readonly UpdateCoordinator coordinator = new();
     private readonly LauncherSelfUpdater selfUpdater = new();
     private readonly GameSessionManager gameSession = new();
+    private readonly ModpackUninstaller uninstaller = new();
     private CancellationTokenSource? operationCancellation;
     private bool closingForUpdate;
     private bool sessionCloseNoticeShown;
@@ -137,11 +139,15 @@ internal sealed class MainForm : Form
         vanillaButton = Theme.Button("Jogar vanilla");
         vanillaButton.Enabled = false;
         vanillaButton.Click += (_, _) => PlayVanilla();
+        removeButton = Theme.Button("Remover mods");
+        removeButton.Enabled = false;
+        removeButton.Click += (_, _) => RemoveMods();
         checkButton = Theme.Button("Verificar atualização");
         checkButton.Enabled = false;
         checkButton.Click += async (_, _) => await CheckAndUpdateAsync(automatic: false);
         actions.Controls.Add(moddedButton);
         actions.Controls.Add(vanillaButton);
+        actions.Controls.Add(removeButton);
         actions.Controls.Add(checkButton);
 
         content.Controls.Add(title, 0, 0);
@@ -222,6 +228,7 @@ internal sealed class MainForm : Form
         checkButton.Enabled = valid;
         vanillaButton.Enabled = valid;
         moddedButton.Enabled = valid;
+        removeButton.Enabled = valid && uninstaller.HasInstalledContent(root!);
         if (!valid)
         {
             versionLabel.Text = "Versão instalada: —";
@@ -271,6 +278,35 @@ internal sealed class MainForm : Form
         if (!result.Success)
             MessageBox.Show(this, result.Message, "Não foi possível jogar vanilla",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+
+    private void RemoveMods()
+    {
+        var root = ResolvedGameRoot;
+        if (root is null) return;
+        if (GameSessionManager.IsPalworldRunning(root))
+        {
+            MessageBox.Show(this, "Feche o Palworld antes de remover os mods.",
+                "Palworld em execução", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+        if (MessageBox.Show(this,
+                "Remover todos os arquivos gerenciados pelo modpack deste cliente?\n\n" +
+                "Um backup será criado automaticamente. Você poderá reinstalar depois usando Jogar com mods.",
+                "Remover mods",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning) != DialogResult.Yes)
+            return;
+
+        SetBusy(true, "Criando backup e removendo os mods...");
+        var result = uninstaller.Uninstall(root);
+        if (result.Success) versionLabel.Text = "Versão instalada: não instalada";
+        SetBusy(false, result.Message, result.Success);
+        MessageBox.Show(this,
+            result.Message,
+            result.Success ? "Mods removidos" : "Falha na remoção",
+            MessageBoxButtons.OK,
+            result.Success ? MessageBoxIcon.Information : MessageBoxIcon.Error);
     }
 
     private async Task<bool> CheckLauncherUpdateAsync()
@@ -422,6 +458,7 @@ internal sealed class MainForm : Form
         checkButton.Enabled = !busy && ResolvedGameRoot is not null;
         vanillaButton.Enabled = !busy && ResolvedGameRoot is not null;
         moddedButton.Enabled = !busy && ResolvedGameRoot is not null;
+        removeButton.Enabled = !busy && ResolvedGameRoot is { } root && uninstaller.HasInstalledContent(root);
         progressBar.Visible = busy && showProgress;
         if (!progressBar.Visible) progressBar.Value = 0;
         SetStatus(message, success);

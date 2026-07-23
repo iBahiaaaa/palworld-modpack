@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$ModpackVersion,
-    [string]$LauncherVersion = "1.1.0",
+    [string]$LauncherVersion = "1.2.0",
     [string]$GameRoot,
     [switch]$SkipBuild
 )
@@ -47,6 +47,7 @@ $notes = @"
 - Atualização automática pelo launcher.
 - Autoatualização do próprio launcher incluída.
 - Steam inicia o Palworld vanilla; o launcher ativa os mods somente durante a sessão.
+- Opção para remover o modpack com backup automático.
 - Hover Transfer incluído.
 - AltTab Work Continuation incluído.
 - Accessory Slots Research incluído com 10 slots totais.

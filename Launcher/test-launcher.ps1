@@ -1,6 +1,6 @@
 param(
-    [string]$ModpackVersion = "0.6.0",
-    [string]$LauncherVersion = "1.1.0"
+    [string]$ModpackVersion = "0.6.1",
+    [string]$LauncherVersion = "1.2.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -92,5 +92,29 @@ $process.WaitForExit()
 if ($process.ExitCode -eq 0) { throw "Pacote com hash inválido foi aceito." }
 $currentHash = (Get-FileHash -LiteralPath (Join-Path $win64 "ue4ss\UE4SS.dll") -Algorithm SHA256).Hash
 if ($currentHash -ne $protectedHash) { throw "O teste de hash alterou a instalação válida." }
+
+$externalFile = Join-Path $win64 "ue4ss\Mods\OutroMod\arquivo-preservado.txt"
+New-Item -ItemType Directory -Force -Path (Split-Path -Parent $externalFile) | Out-Null
+Set-Content -LiteralPath $externalFile -Value "preservar" -Encoding utf8
+Invoke-Launcher @("--uninstall-modpack", $gameRoot)
+$removedPaths = @(
+    (Join-Path $win64 "dwmapi.dll"),
+    (Join-Path $win64 "Palworld-Modpack"),
+    (Join-Path $win64 "ue4ss\UE4SS.dll"),
+    (Join-Path $win64 "ue4ss\palworld-modpack-state.json"),
+    (Join-Path $win64 "ue4ss\Mods\HoverTransfer"),
+    (Join-Path $win64 "ue4ss\Mods\AltTabWorkContinuation"),
+    (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch")
+)
+foreach ($path in $removedPaths) {
+    if (Test-Path -LiteralPath $path) { throw "A remoção preservou um arquivo do modpack: $path" }
+}
+if (-not (Test-Path -LiteralPath $externalFile)) { throw "A remoção apagou um mod externo." }
+$uninstallBackups = @(Get-ChildItem -LiteralPath (Join-Path $win64 "Palworld-Modpack-Backups") -Directory -Filter "launcher-removal-*")
+if ($uninstallBackups.Count -lt 1) { throw "O backup da remoção não foi criado." }
+
+Invoke-Launcher @("--apply-local", $gameRoot, $package, $ModpackVersion, "v$ModpackVersion", $checksum)
+if (-not (Test-Path -LiteralPath (Join-Path $win64 "ue4ss\palworld-modpack-state.json"))) { throw "A reinstalação não recriou o estado." }
+if (Test-Path -LiteralPath (Join-Path $win64 "dwmapi.dll")) { throw "A reinstalação deixou a Steam com mods ativos." }
 
 Write-Host "Teste completo do launcher concluído."

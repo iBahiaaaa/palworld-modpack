@@ -73,6 +73,38 @@ internal sealed class GameSessionManager
 
     public static bool IsPalworldRunning() => CountRunningProcesses() > 0;
 
+    public static bool IsPalworldRunning(string gameRoot)
+    {
+        var resolvedRoot = PalworldLocator.Resolve(gameRoot);
+        if (resolvedRoot is null) return IsPalworldRunning();
+        var rootPrefix = Path.GetFullPath(resolvedRoot).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+        var processes = GetRunningProcesses();
+        try
+        {
+            foreach (var process in processes)
+            {
+                try
+                {
+                    var executable = process.MainModule?.FileName;
+                    if (!string.IsNullOrWhiteSpace(executable) &&
+                        Path.GetFullPath(executable).StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+                catch
+                {
+                    // Se não for possível consultar o caminho, mantém o bloqueio por segurança.
+                    return true;
+                }
+            }
+            return false;
+        }
+        finally
+        {
+            foreach (var process in processes) process.Dispose();
+        }
+    }
+
     private static void LaunchThroughSteam()
     {
         Process.Start(new ProcessStartInfo("steam://rungameid/1623730") { UseShellExecute = true });
@@ -101,10 +133,13 @@ internal sealed class GameSessionManager
 
     private static int CountRunningProcesses()
     {
-        var processes = Process.GetProcessesByName("Palworld-Win64-Shipping")
-            .Concat(Process.GetProcessesByName("Palworld"))
-            .ToArray();
+        var processes = GetRunningProcesses();
         foreach (var process in processes) process.Dispose();
         return processes.Length;
     }
+
+    private static Process[] GetRunningProcesses() =>
+        Process.GetProcessesByName("Palworld-Win64-Shipping")
+            .Concat(Process.GetProcessesByName("Palworld"))
+            .ToArray();
 }
