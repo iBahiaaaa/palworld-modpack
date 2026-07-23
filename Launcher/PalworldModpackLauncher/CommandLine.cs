@@ -15,6 +15,7 @@ internal static class CommandLine
                 "--activate-mods" => SetModState(args, activate: true),
                 "--disable-mods" => SetModState(args, activate: false),
                 "--uninstall-modpack" => UninstallModpack(args),
+                "--install-launcher-test" => InstallLauncherTest(args),
                 "--replace-launcher" => LauncherSelfUpdater.ReplaceAndRestart(args),
                 _ => Fail("Comando desconhecido."),
             };
@@ -77,6 +78,14 @@ internal static class CommandLine
     {
         if (args.Length != 2) return Fail("Uso: --uninstall-modpack <pasta>");
         var result = new ModpackUninstaller().Uninstall(args[1]);
+        Console.WriteLine(result.Message);
+        return result.Success ? 0 : 1;
+    }
+
+    private static int InstallLauncherTest(string[] args)
+    {
+        if (args.Length != 2) return Fail("Uso: --install-launcher-test <pasta>");
+        var result = new LauncherInstallationManager().InstallForTest(args[1]);
         Console.WriteLine(result.Message);
         return result.Success ? 0 : 1;
     }

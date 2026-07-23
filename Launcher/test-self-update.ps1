@@ -1,5 +1,5 @@
 param(
-    [string]$LauncherVersion = "1.3.0"
+    [string]$LauncherVersion = "1.4.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -38,5 +38,31 @@ if ($process.ExitCode -ne 0) { throw "Substituição do launcher falhou: $($proc
 $sourceHash = (Get-FileHash -LiteralPath $launcher -Algorithm SHA256).Hash
 $destinationHash = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash
 if ($sourceHash -ne $destinationHash) { throw "O executável atualizado não corresponde ao original." }
+
+$installRoot = Join-Path $testRoot "installation"
+$installInfo = [Diagnostics.ProcessStartInfo]::new()
+$installInfo.FileName = $launcher
+$installInfo.Arguments = '"--install-launcher-test" "' + $installRoot.Replace('"', '\"') + '"'
+$installInfo.UseShellExecute = $false
+$installInfo.CreateNoWindow = $true
+$installProcess = [Diagnostics.Process]::Start($installInfo)
+$installProcess.WaitForExit()
+if ($installProcess.ExitCode -ne 0) { throw "Instalação local do launcher falhou: $($installProcess.ExitCode)" }
+
+$installedExecutable = Join-Path $installRoot "AppData\Palworld-Modpack-Launcher.exe"
+$desktopShortcut = Join-Path $installRoot "Desktop\Palworld Modpack Launcher.lnk"
+$startMenuShortcut = Join-Path $installRoot "StartMenu\Palworld Modpack Launcher.lnk"
+foreach ($path in @($installedExecutable, $desktopShortcut, $startMenuShortcut)) {
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Arquivo da instalação ausente: $path" }
+}
+$installedHash = (Get-FileHash -LiteralPath $installedExecutable -Algorithm SHA256).Hash
+if ($sourceHash -ne $installedHash) { throw "O launcher instalado não corresponde ao executável original." }
+$shortcutShell = New-Object -ComObject WScript.Shell
+foreach ($shortcutPath in @($desktopShortcut, $startMenuShortcut)) {
+    $shortcut = $shortcutShell.CreateShortcut($shortcutPath)
+    if ([IO.Path]::GetFullPath($shortcut.TargetPath) -ne [IO.Path]::GetFullPath($installedExecutable)) {
+        throw "O atalho aponta para um executável incorreto: $shortcutPath"
+    }
+}
 
 Write-Host "Teste de autoatualização do launcher concluído."

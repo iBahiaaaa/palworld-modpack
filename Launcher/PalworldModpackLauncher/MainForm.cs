@@ -9,6 +9,7 @@ internal sealed class MainForm : Form
     private readonly Label statusLabel;
     private readonly ProgressBar progressBar;
     private readonly Button checkButton;
+    private readonly Button installButton;
     private readonly Button removeButton;
     private readonly Button vanillaButton;
     private readonly Button moddedButton;
@@ -16,6 +17,7 @@ internal sealed class MainForm : Form
     private readonly LauncherSelfUpdater selfUpdater = new();
     private readonly GameSessionManager gameSession = new();
     private readonly ModpackUninstaller uninstaller = new();
+    private readonly LauncherInstallationManager installationManager = new();
     private CancellationTokenSource? operationCancellation;
     private bool closingForUpdate;
     private bool sessionCloseNoticeShown;
@@ -131,7 +133,7 @@ internal sealed class MainForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
             FlowDirection = FlowDirection.RightToLeft,
-            WrapContents = false,
+            WrapContents = true,
         };
         moddedButton = Theme.Button("Jogar com mods", primary: true);
         moddedButton.Enabled = false;
@@ -142,13 +144,17 @@ internal sealed class MainForm : Form
         removeButton = Theme.Button("Remover mods");
         removeButton.Enabled = false;
         removeButton.Click += (_, _) => RemoveMods();
+        installButton = Theme.Button("Instalar launcher");
+        installButton.Click += (_, _) => InstallLauncher();
         checkButton = Theme.Button("Verificar atualização");
         checkButton.Enabled = false;
         checkButton.Click += async (_, _) => await CheckAndUpdateAsync(automatic: false);
         actions.Controls.Add(moddedButton);
         actions.Controls.Add(vanillaButton);
         actions.Controls.Add(removeButton);
+        actions.Controls.Add(installButton);
         actions.Controls.Add(checkButton);
+        RefreshInstallButton();
 
         content.Controls.Add(title, 0, 0);
         content.Controls.Add(subtitle, 0, 1);
@@ -309,6 +315,61 @@ internal sealed class MainForm : Form
             result.Success ? MessageBoxIcon.Information : MessageBoxIcon.Error);
     }
 
+    private void InstallLauncher()
+    {
+        if (!installationManager.IsInstalled &&
+            MessageBox.Show(this,
+                "Instalar o launcher neste computador?\n\n" +
+                "Serão criados atalhos na Área de Trabalho e no Menu Iniciar. Não é necessário acesso de administrador.",
+                "Instalar launcher",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question) != DialogResult.Yes)
+            return;
+
+        SetBusy(true, "Instalando o launcher e criando os atalhos...");
+        var result = installationManager.Install();
+        SetBusy(false, result.Message, result.Success);
+        if (!result.Success)
+        {
+            MessageBox.Show(this, result.Message, "Falha na instalação",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        RefreshInstallButton();
+        if (MessageBox.Show(this,
+                result.Message + "\n\nAbrir agora a versão instalada?",
+                "Launcher instalado",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Information) != DialogResult.Yes)
+            return;
+
+        var opened = installationManager.OpenInstalled();
+        if (!opened.Success)
+        {
+            MessageBox.Show(this, opened.Message, "Falha ao abrir",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+        closingForUpdate = true;
+        Close();
+    }
+
+    private void RefreshInstallButton()
+    {
+        if (installationManager.IsRunningInstalled)
+        {
+            installButton.Text = "Launcher instalado";
+            installButton.Enabled = false;
+            return;
+        }
+
+        installButton.Text = installationManager.IsInstalled
+            ? "Atualizar instalação"
+            : "Instalar launcher";
+        installButton.Enabled = true;
+    }
+
     private async Task<bool> CheckLauncherUpdateAsync()
     {
         if (operationCancellation is not null) return false;
@@ -454,6 +515,7 @@ internal sealed class MainForm : Form
         vanillaButton.Enabled = !busy && ResolvedGameRoot is not null;
         moddedButton.Enabled = !busy && ResolvedGameRoot is not null;
         removeButton.Enabled = !busy && ResolvedGameRoot is { } root && uninstaller.HasInstalledContent(root);
+        installButton.Enabled = !busy && !installationManager.IsRunningInstalled;
         progressBar.Visible = busy && showProgress;
         if (!progressBar.Visible) progressBar.Value = 0;
         SetStatus(message, success);

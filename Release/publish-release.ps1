@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$ModpackVersion,
-    [string]$LauncherVersion = "1.3.0",
+    [string]$LauncherVersion = "1.4.0",
     [string]$GameRoot,
     [switch]$SkipBuild
 )
@@ -49,6 +49,7 @@ $notes = @"
 - O launcher pode atualizar seu executável mesmo com o Palworld aberto.
 - Steam inicia o Palworld vanilla; o launcher ativa os mods somente durante a sessão.
 - Opção para remover o modpack com backup automático.
+- Instalação local sem administrador, com atalhos na Área de Trabalho e Menu Iniciar.
 - Hover Transfer incluído.
 - AltTab Work Continuation incluído.
 - Accessory Slots Research incluído com 10 slots totais.
