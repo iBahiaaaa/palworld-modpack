@@ -1,6 +1,6 @@
 param(
-    [string]$ModpackVersion = "0.6.3",
-    [string]$LauncherVersion = "1.4.0"
+    [string]$ModpackVersion = "0.7.0",
+    [string]$LauncherVersion = "1.7.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -53,6 +53,10 @@ $required = @(
     (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\Scripts\main.lua"),
     (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\Scripts\slot_limits.lua"),
     (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\Scripts\equipment_storage.lua"),
+    (Join-Path $win64 "ue4ss\Mods\ItemStackExtender\enabled.txt"),
+    (Join-Path $win64 "ue4ss\Mods\ItemStackExtender\config.json"),
+    (Join-Path $win64 "ue4ss\Mods\ItemStackExtender\Scripts\main.lua"),
+    (Join-Path $win64 "ue4ss\Mods\ItemStackExtender\Scripts\static_data_sync.lua"),
     (Join-Path $win64 "ue4ss\palworld-modpack-state.json"),
     (Join-Path $win64 "arquivo-preservado.txt")
 )
@@ -63,7 +67,24 @@ if (Test-Path -LiteralPath (Join-Path $win64 "dwmapi.dll")) { throw "O carregado
 
 $state = Get-Content -LiteralPath (Join-Path $win64 "ue4ss\palworld-modpack-state.json") -Raw | ConvertFrom-Json
 if ($state.version -ne $ModpackVersion) { throw "Versão instalada incorreta: $($state.version)" }
-if ($state.managedFiles.Count -lt 26) { throw "Lista de arquivos gerenciados incompleta." }
+if ($state.managedFiles.Count -lt 34) { throw "Lista de arquivos gerenciados incompleta." }
+
+Invoke-Launcher @("--set-enabled-mods", $gameRoot, "HoverTransfer")
+if (-not (Test-Path -LiteralPath (Join-Path $win64 "ue4ss\Mods\HoverTransfer\enabled.txt"))) {
+    throw "O mod selecionado foi desativado."
+}
+foreach ($disabledMarker in @(
+    (Join-Path $win64 "ue4ss\Mods\AltTabWorkContinuation\enabled.txt"),
+    (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\enabled.txt"),
+    (Join-Path $win64 "ue4ss\Mods\ItemStackExtender\enabled.txt")
+)) {
+    if (Test-Path -LiteralPath $disabledMarker) {
+        throw "Um mod desmarcado permaneceu ativo: $disabledMarker"
+    }
+}
+if (-not (Test-Path -LiteralPath (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\Scripts\main.lua"))) {
+    throw "Desativar um mod removeu os arquivos dele."
+}
 
 Invoke-Launcher @("--activate-mods", $gameRoot)
 if (-not (Test-Path -LiteralPath (Join-Path $win64 "dwmapi.dll"))) { throw "Os mods não foram ativados." }
@@ -104,7 +125,8 @@ $removedPaths = @(
     (Join-Path $win64 "ue4ss\palworld-modpack-state.json"),
     (Join-Path $win64 "ue4ss\Mods\HoverTransfer"),
     (Join-Path $win64 "ue4ss\Mods\AltTabWorkContinuation"),
-    (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch")
+    (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch"),
+    (Join-Path $win64 "ue4ss\Mods\ItemStackExtender")
 )
 foreach ($path in $removedPaths) {
     if (Test-Path -LiteralPath $path) { throw "A remoção preservou um arquivo do modpack: $path" }

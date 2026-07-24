@@ -51,6 +51,7 @@ $sourceUe4ss = Join-Path $sourceWin64 'ue4ss'
 $sourceMod = Join-Path $projectRoot 'Scripts'
 $sourceAltTab = Join-Path $projectRoot 'Mods\AltTabWorkContinuation'
 $sourceAccessorySlots = Join-Path $projectRoot 'Mods\AccessorySlotsResearch'
+$sourceItemStack = Join-Path $projectRoot 'Mods\ItemStackExtender'
 
 foreach ($required in @(
     (Join-Path $sourceWin64 'dwmapi.dll'),
@@ -77,7 +78,15 @@ foreach ($required in @(
     (Join-Path $sourceAccessorySlots 'Scripts\slot_visual_style.lua'),
     (Join-Path $sourceAccessorySlots 'Scripts\slot_probe.lua'),
     (Join-Path $sourceAccessorySlots 'Scripts\ui_probe.lua'),
-    (Join-Path $sourceAccessorySlots 'Scripts\session_log.lua')
+    (Join-Path $sourceAccessorySlots 'Scripts\session_log.lua'),
+    (Join-Path $sourceItemStack 'enabled.txt'),
+    (Join-Path $sourceItemStack 'config.json'),
+    (Join-Path $sourceItemStack 'Scripts\main.lua'),
+    (Join-Path $sourceItemStack 'Scripts\config.lua'),
+    (Join-Path $sourceItemStack 'Scripts\runtime_environment.lua'),
+    (Join-Path $sourceItemStack 'Scripts\session_log.lua'),
+    (Join-Path $sourceItemStack 'Scripts\stack_override.lua'),
+    (Join-Path $sourceItemStack 'Scripts\static_data_sync.lua')
 )) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
         throw "Arquivo obrigatório ausente: $required"
@@ -100,8 +109,10 @@ $targetAltTab = Join-Path $targetUe4ss 'Mods\AltTabWorkContinuation'
 $targetAltTabScripts = Join-Path $targetAltTab 'Scripts'
 $targetAccessorySlots = Join-Path $targetUe4ss 'Mods\AccessorySlotsResearch'
 $targetAccessoryScripts = Join-Path $targetAccessorySlots 'Scripts'
+$targetItemStack = Join-Path $targetUe4ss 'Mods\ItemStackExtender'
+$targetItemStackScripts = Join-Path $targetItemStack 'Scripts'
 $targetStoredLoader = Join-Path $payloadRoot 'Palworld-Modpack\loader'
-New-Item -ItemType Directory -Force -Path $targetScripts, $targetAltTabScripts, $targetAccessoryScripts, $targetStoredLoader | Out-Null
+New-Item -ItemType Directory -Force -Path $targetScripts, $targetAltTabScripts, $targetAccessoryScripts, $targetItemStackScripts, $targetStoredLoader | Out-Null
 
 Copy-Item -LiteralPath (Join-Path $sourceWin64 'dwmapi.dll') -Destination (Join-Path $payloadRoot 'dwmapi.dll')
 Copy-Item -LiteralPath (Join-Path $sourceWin64 'dwmapi.dll') -Destination (Join-Path $targetStoredLoader 'dwmapi.dll')
@@ -121,9 +132,15 @@ Get-ChildItem -LiteralPath (Join-Path $sourceAccessorySlots 'Scripts') -Filter '
     ForEach-Object {
         Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $targetAccessoryScripts $_.Name)
     }
+Copy-Item -LiteralPath (Join-Path $sourceItemStack 'enabled.txt') -Destination (Join-Path $targetItemStack 'enabled.txt')
+Copy-Item -LiteralPath (Join-Path $sourceItemStack 'config.json') -Destination (Join-Path $targetItemStack 'config.json')
+Get-ChildItem -LiteralPath (Join-Path $sourceItemStack 'Scripts') -Filter '*.lua' -File |
+    ForEach-Object {
+        Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $targetItemStackScripts $_.Name)
+    }
 
 $unexpectedMods = Get-ChildItem -LiteralPath (Join-Path $targetUe4ss 'Mods') -Directory |
-    Where-Object Name -notin @('HoverTransfer', 'AltTabWorkContinuation', 'AccessorySlotsResearch')
+    Where-Object Name -notin @('HoverTransfer', 'AltTabWorkContinuation', 'AccessorySlotsResearch', 'ItemStackExtender')
 if ($unexpectedMods) {
     throw "O payload contém mods inesperados: $($unexpectedMods.Name -join ', ')"
 }

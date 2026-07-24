@@ -14,6 +14,8 @@ internal static class CommandLine
                 "--check-launcher-release" => CheckLauncherRelease().GetAwaiter().GetResult(),
                 "--activate-mods" => SetModState(args, activate: true),
                 "--disable-mods" => SetModState(args, activate: false),
+                "--list-mods" => ListMods(args),
+                "--set-enabled-mods" => SetEnabledMods(args),
                 "--uninstall-modpack" => UninstallModpack(args),
                 "--install-launcher-test" => InstallLauncherTest(args),
                 "--replace-launcher" => LauncherSelfUpdater.ReplaceAndRestart(args),
@@ -70,6 +72,29 @@ internal static class CommandLine
         var result = activate
             ? manager.Activate(args[1])
             : manager.EnsureVanilla(args[1], new ModpackInstaller().ReadState(args[1]));
+        Console.WriteLine(result.Message);
+        return result.Success ? 0 : 1;
+    }
+
+    private static int ListMods(string[] args)
+    {
+        if (args.Length != 2) return Fail("Uso: --list-mods <pasta>");
+        var state = new ModpackInstaller().ReadState(args[1]);
+        var service = new ModSelectionService();
+        foreach (var option in service.Discover(args[1], state))
+            Console.WriteLine($"{option.Id}|{option.DisplayName}|{option.EnabledByDefault}");
+        return 0;
+    }
+
+    private static int SetEnabledMods(string[] args)
+    {
+        if (args.Length != 3) return Fail("Uso: --set-enabled-mods <pasta> <mod1,mod2>");
+        var selected = args[2]
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var state = new ModpackInstaller().ReadState(args[1]);
+        var result = new ModSelectionService().ApplySelection(args[1], selected, state);
         Console.WriteLine(result.Message);
         return result.Success ? 0 : 1;
     }

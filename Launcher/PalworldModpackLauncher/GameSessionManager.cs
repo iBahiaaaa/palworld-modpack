@@ -5,18 +5,23 @@ namespace PalworldModpackLauncher;
 internal sealed class GameSessionManager
 {
     private readonly ModActivationManager activationManager = new();
+    private readonly SemaphoreSlim restartGate = new(1, 1);
+    private volatile bool restartInProgress;
 
     public bool IsSessionActive { get; private set; }
+    public bool IsRestarting => restartInProgress;
 
     public async Task<OperationResult> LaunchModdedAsync(
         string gameRoot,
+        IReadOnlyCollection<string> enabledMods,
+        InstalledState? installedState,
         Action? gameStarted = null,
         CancellationToken cancellationToken = default)
     {
         if (IsPalworldRunning())
             return new OperationResult(false, "O Palworld já está aberto. Feche-o antes de iniciar com mods.");
 
-        var activated = activationManager.Activate(gameRoot);
+        var activated = activationManager.Activate(gameRoot, enabledMods, installedState);
         if (!activated.Success) return activated;
 
         IsSessionActive = true;
@@ -71,6 +76,57 @@ internal sealed class GameSessionManager
     public OperationResult EnsureVanilla(string gameRoot, InstalledState? state = null) =>
         activationManager.EnsureVanilla(gameRoot, state);
 
+    public async Task<OperationResult> RestartAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsSessionActive)
+            return new OperationResult(
+                false,
+                "Inicie o Palworld com mods pelo launcher antes de usar o reinício.");
+        if (!IsPalworldRunning())
+            return new OperationResult(false, "O Palworld não está aberto.");
+        if (!await restartGate.WaitAsync(0, cancellationToken))
+            return new OperationResult(false, "O Palworld já está sendo reiniciado.");
+
+        restartInProgress = true;
+        try
+        {
+            var stopped = await StopPalworldAsync(cancellationToken);
+            if (!stopped)
+                return new OperationResult(
+                    false,
+                    "Não foi possível encerrar completamente o Palworld.");
+
+            await Task.Delay(1500, cancellationToken);
+            LaunchThroughSteam();
+            var started = await WaitForGameStartAsync(
+                TimeSpan.FromMinutes(2),
+                cancellationToken);
+            return started
+                ? new OperationResult(
+                    true,
+                    "Palworld reiniciado com os mesmos mods desta sessão.")
+                : new OperationResult(
+                    false,
+                    "O Palworld foi fechado, mas não reabriu dentro do tempo esperado.");
+        }
+        catch (TaskCanceledException)
+        {
+            return new OperationResult(false, "O reinício do Palworld foi cancelado.");
+        }
+        catch (Exception exception)
+        {
+            return new OperationResult(
+                false,
+                "Não foi possível reiniciar o Palworld:\n" + exception.Message);
+        }
+        finally
+        {
+            restartInProgress = false;
+            restartGate.Release();
+        }
+    }
+
     public static bool IsPalworldRunning() => CountRunningProcesses() > 0;
 
     public static bool IsPalworldRunning(string gameRoot)
@@ -121,14 +177,84 @@ internal sealed class GameSessionManager
         return false;
     }
 
-    private static async Task WaitForGameExitAsync(CancellationToken cancellationToken)
+    private async Task WaitForGameExitAsync(CancellationToken cancellationToken)
     {
         var emptyChecks = 0;
         while (emptyChecks < 3)
         {
+            if (restartInProgress)
+            {
+                emptyChecks = 0;
+                await Task.Delay(250, cancellationToken);
+                continue;
+            }
             emptyChecks = CountRunningProcesses() == 0 ? emptyChecks + 1 : 0;
             await Task.Delay(1000, cancellationToken);
         }
+    }
+
+    private static async Task<bool> StopPalworldAsync(
+        CancellationToken cancellationToken)
+    {
+        var processes = GetRunningProcesses();
+        try
+        {
+            foreach (var process in processes)
+            {
+                try
+                {
+                    if (!process.HasExited) process.CloseMainWindow();
+                }
+                catch
+                {
+                    // A finalização forçada abaixo cobre processos sem janela.
+                }
+            }
+        }
+        finally
+        {
+            foreach (var process in processes) process.Dispose();
+        }
+
+        if (await WaitForGameStopAsync(TimeSpan.FromSeconds(8), cancellationToken))
+            return true;
+
+        processes = GetRunningProcesses();
+        try
+        {
+            foreach (var process in processes)
+            {
+                try
+                {
+                    if (!process.HasExited) process.Kill(entireProcessTree: true);
+                }
+                catch
+                {
+                    // A verificação final informa se algum processo resistiu.
+                }
+            }
+        }
+        finally
+        {
+            foreach (var process in processes) process.Dispose();
+        }
+
+        return await WaitForGameStopAsync(
+            TimeSpan.FromSeconds(20),
+            cancellationToken);
+    }
+
+    private static async Task<bool> WaitForGameStopAsync(
+        TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            if (CountRunningProcesses() == 0) return true;
+            await Task.Delay(250, cancellationToken);
+        }
+        return CountRunningProcesses() == 0;
     }
 
     private static int CountRunningProcesses()

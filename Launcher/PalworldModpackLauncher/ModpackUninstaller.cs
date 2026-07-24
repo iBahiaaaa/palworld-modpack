@@ -9,6 +9,7 @@ internal sealed class ModpackUninstaller
         Path.Combine("ue4ss", "Mods", "HoverTransfer"),
         Path.Combine("ue4ss", "Mods", "AltTabWorkContinuation"),
         Path.Combine("ue4ss", "Mods", "AccessorySlotsResearch"),
+        Path.Combine("ue4ss", "Mods", "ItemStackExtender"),
     };
 
     private readonly ModpackInstaller installer = new();

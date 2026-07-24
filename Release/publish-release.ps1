@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$ModpackVersion,
-    [string]$LauncherVersion = "1.4.0",
+    [string]$LauncherVersion = "1.7.0",
     [string]$GameRoot,
     [switch]$SkipBuild
 )
@@ -53,6 +53,7 @@ $notes = @"
 - Hover Transfer incluído.
 - AltTab Work Continuation incluído.
 - Accessory Slots Research incluído com 10 slots totais.
+- Item Stack Extender incluído com pilhas de até 100.000 itens.
 - UE4SS incluído no pacote de cliente.
 - Verificação de integridade por SHA-256.
 

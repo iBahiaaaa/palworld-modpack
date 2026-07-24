@@ -164,6 +164,20 @@ internal sealed class ModpackInstaller
         {
             required.Add("Palworld-Modpack/loader/dwmapi.dll");
         }
+        if (packageVersion >= new Version(0, 7, 0))
+        {
+            required.AddRange(new[]
+            {
+                "ue4ss/Mods/ItemStackExtender/enabled.txt",
+                "ue4ss/Mods/ItemStackExtender/config.json",
+                "ue4ss/Mods/ItemStackExtender/Scripts/main.lua",
+                "ue4ss/Mods/ItemStackExtender/Scripts/config.lua",
+                "ue4ss/Mods/ItemStackExtender/Scripts/runtime_environment.lua",
+                "ue4ss/Mods/ItemStackExtender/Scripts/session_log.lua",
+                "ue4ss/Mods/ItemStackExtender/Scripts/stack_override.lua",
+                "ue4ss/Mods/ItemStackExtender/Scripts/static_data_sync.lua",
+            });
+        }
         var missing = required.Where(file => !set.Contains(file)).ToArray();
         if (missing.Length > 0)
             throw new InvalidDataException("Arquivos obrigatórios ausentes: " + string.Join(", ", missing));

@@ -53,6 +53,12 @@ Expande os acessórios para 10 slots totais: quatro vanilla e seis adicionais.
 Os slots extras equipam, atualizam o visual e permanecem salvos no servidor.
 Todos os jogadores devem manter a mesma versão instalada pelo launcher.
 
+### Item Stack Extender
+
+Aumenta para 100.000 o limite dos materiais empilháveis. O cliente e o servidor
+sincronizam os mesmos dados, enquanto armas, armaduras e acessórios permanecem
+limitados a uma unidade.
+
 ## Segurança da atualização
 
 - O repositório de atualização é fixo em `iBahiaaaa/palworld-modpack`.
@@ -70,17 +76,18 @@ Todos os jogadores devem manter a mesma versão instalada pelo launcher.
 - `Native/`: auxiliar nativo do Hover Transfer.
 - `Mods/AltTabWorkContinuation/`: código e auxiliar nativo do mod de fabricação.
 - `Mods/AccessorySlotsResearch/`: expansão dos slots de acessório.
+- `Mods/ItemStackExtender/`: expansão e sincronização das pilhas de materiais.
 - `Scripts/`: código Lua, configuração, compilação e validação do mod.
 - `Installer/`: instalador antigo, mantido como alternativa.
 
 ## Gerar e testar
 
 ```powershell
-.\Release\build-modpack-package.ps1 -Version 0.6.3
-.\Launcher\build-launcher.ps1 -Version 1.4.0
-.\Launcher\test-launcher.ps1 -ModpackVersion 0.6.3
+.\Release\build-modpack-package.ps1 -Version 0.7.0
+.\Launcher\build-launcher.ps1 -Version 1.7.0
+.\Launcher\test-launcher.ps1 -ModpackVersion 0.7.0 -LauncherVersion 1.7.0
 .\Launcher\test-modpack-update.ps1
-.\Launcher\test-self-update.ps1 -LauncherVersion 1.4.0
+.\Launcher\test-self-update.ps1 -LauncherVersion 1.7.0
 ```
 
 ## Publicar uma atualização
@@ -88,7 +95,7 @@ Todos os jogadores devem manter a mesma versão instalada pelo launcher.
 Atualize o número da versão e execute:
 
 ```powershell
-.\Release\publish-release.ps1 -ModpackVersion 0.6.3 -LauncherVersion 1.4.0
+.\Release\publish-release.ps1 -ModpackVersion 0.7.0 -LauncherVersion 1.7.0
 ```
 
 O script monta o pacote, compila o launcher, executa o teste completo e cria a
@@ -98,7 +105,7 @@ Se uma publicação falhar somente durante o upload, repita sem recompilar os
 arquivos que já passaram nos testes:
 
 ```powershell
-.\Release\publish-release.ps1 -ModpackVersion 0.6.3 -LauncherVersion 1.4.0 -SkipBuild
+.\Release\publish-release.ps1 -ModpackVersion 0.7.0 -LauncherVersion 1.7.0 -SkipBuild
 ```
 
 ## Licenças

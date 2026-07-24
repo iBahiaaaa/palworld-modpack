@@ -47,10 +47,20 @@ internal sealed class ModActivationManager
         }
     }
 
-    public OperationResult Activate(string gameRoot)
+    public OperationResult Activate(
+        string gameRoot,
+        IReadOnlyCollection<string>? enabledMods = null,
+        InstalledState? installedState = null)
     {
         try
         {
+            if (enabledMods is not null)
+            {
+                var selection = new ModSelectionService()
+                    .ApplySelection(gameRoot, enabledMods, installedState);
+                if (!selection.Success) return selection;
+            }
+
             var win64 = ResolveWin64(gameRoot);
             var active = Path.Combine(win64, ActiveLoaderRelativePath);
             var stored = Path.Combine(win64, StoredLoaderRelativePath);
@@ -69,7 +79,11 @@ internal sealed class ModActivationManager
             var temporary = active + ".modpack-temporario";
             File.Copy(stored, temporary, overwrite: true);
             File.Move(temporary, active);
-            return new OperationResult(true, "Mods ativados para esta sessão.");
+            return new OperationResult(
+                true,
+                enabledMods is null
+                    ? "Mods ativados para esta sessão."
+                    : $"{enabledMods.Count} mod(s) ativado(s) para esta sessão.");
         }
         catch (Exception exception)
         {

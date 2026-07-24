@@ -13,11 +13,14 @@ internal sealed class MainForm : Form
     private readonly Button removeButton;
     private readonly Button vanillaButton;
     private readonly Button moddedButton;
+    private readonly Button restartButton;
+    private readonly ModSelectionPanel modSelectionPanel;
     private readonly UpdateCoordinator coordinator = new();
     private readonly LauncherSelfUpdater selfUpdater = new();
     private readonly GameSessionManager gameSession = new();
     private readonly ModpackUninstaller uninstaller = new();
     private readonly LauncherInstallationManager installationManager = new();
+    private readonly ModSelectionService modSelectionService = new();
     private CancellationTokenSource? operationCancellation;
     private bool closingForUpdate;
     private bool sessionCloseNoticeShown;
@@ -26,8 +29,8 @@ internal sealed class MainForm : Form
     {
         Text = "Palworld Modpack - Launcher";
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(800, 490);
-        MinimumSize = new Size(720, 470);
+        ClientSize = new Size(840, 680);
+        MinimumSize = new Size(740, 630);
         BackColor = Theme.Window;
         ForeColor = Theme.Text;
         Font = new Font("Segoe UI", 10F);
@@ -128,6 +131,12 @@ internal sealed class MainForm : Form
         infoPanel.Controls.Add(statusLabel, 0, 1);
         infoPanel.Controls.Add(progressBar, 0, 2);
 
+        modSelectionPanel = new ModSelectionPanel
+        {
+            Margin = new Padding(0, 0, 0, 18),
+        };
+        modSelectionPanel.SelectionChanged += (_, _) => SaveModSelection();
+
         var actions = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -138,6 +147,9 @@ internal sealed class MainForm : Form
         moddedButton = Theme.Button("Jogar com mods", primary: true);
         moddedButton.Enabled = false;
         moddedButton.Click += async (_, _) => await PlayModdedAsync();
+        restartButton = Theme.Button("Reiniciar jogo");
+        restartButton.Enabled = false;
+        restartButton.Click += async (_, _) => await RestartGameAsync();
         vanillaButton = Theme.Button("Jogar vanilla");
         vanillaButton.Enabled = false;
         vanillaButton.Click += (_, _) => PlayVanilla();
@@ -150,6 +162,7 @@ internal sealed class MainForm : Form
         checkButton.Enabled = false;
         checkButton.Click += async (_, _) => await CheckAndUpdateAsync(automatic: false);
         actions.Controls.Add(moddedButton);
+        actions.Controls.Add(restartButton);
         actions.Controls.Add(vanillaButton);
         actions.Controls.Add(removeButton);
         actions.Controls.Add(installButton);
@@ -161,7 +174,8 @@ internal sealed class MainForm : Form
         content.Controls.Add(pathLabel, 0, 2);
         content.Controls.Add(pathRow, 0, 3);
         content.Controls.Add(infoPanel, 0, 4);
-        content.Controls.Add(actions, 0, 5);
+        content.Controls.Add(modSelectionPanel, 0, 5);
+        content.Controls.Add(actions, 0, 6);
         Controls.Add(content);
 
         Shown += async (_, _) => await InitializeAsync();
@@ -176,7 +190,7 @@ internal sealed class MainForm : Form
             Dock = DockStyle.Fill,
             Padding = new Padding(30, 25, 30, 24),
             ColumnCount = 1,
-            RowCount = 6,
+            RowCount = 7,
             BackColor = Theme.Window,
         };
         content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -184,6 +198,7 @@ internal sealed class MainForm : Form
         content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         content.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         return content;
     }
@@ -237,15 +252,23 @@ internal sealed class MainForm : Form
         removeButton.Enabled = valid && uninstaller.HasInstalledContent(root!);
         if (!valid)
         {
+            modSelectionPanel.SetMods(Array.Empty<ModOption>(), Array.Empty<string>());
+            modSelectionPanel.SetInteractionEnabled(false);
             versionLabel.Text = "Versão instalada: —";
             SetStatus("A pasta selecionada não contém uma instalação válida do Palworld.", false);
             return;
         }
 
-        LauncherSettingsStore.Save(root!);
         var state = coordinator.ReadState(root!);
+        var settings = LauncherSettingsStore.Load();
+        var options = modSelectionService.Discover(root!, state);
+        var selected = modSelectionService.ResolveSelection(root!, options, settings);
+        modSelectionPanel.SetMods(options, selected);
+        modSelectionPanel.SetInteractionEnabled(true);
+        LauncherSettingsStore.Save(root!, selected);
         versionLabel.Text = "Versão instalada: " + (state?.Version ?? "não instalada");
         SetStatus($"Palworld encontrado em:\n{root}\nSteam: vanilla | Launcher: com mods", true);
+        moddedButton.Enabled = selected.Count > 0;
     }
 
     private async Task PlayModdedAsync()
@@ -253,14 +276,31 @@ internal sealed class MainForm : Form
         var root = ResolvedGameRoot;
         if (root is null) return;
         if (!await CheckAndUpdateAsync(automatic: true)) return;
+        var selectedMods = modSelectionPanel.SelectedModIds;
+        if (selectedMods.Count == 0)
+        {
+            MessageBox.Show(
+                this,
+                "Selecione pelo menos um mod antes de iniciar.",
+                "Nenhum mod selecionado",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+            return;
+        }
 
         operationCancellation = new CancellationTokenSource();
-        SetBusy(true, "Ativando os mods e iniciando o Palworld...");
+        SetBusy(true, $"Ativando {selectedMods.Count} mod(s) e iniciando o Palworld...");
         try
         {
             var result = await gameSession.LaunchModdedAsync(
                 root,
-                () => BeginInvoke(new Action(() => WindowState = FormWindowState.Minimized)),
+                selectedMods,
+                coordinator.ReadState(root),
+                () => BeginInvoke(new Action(() =>
+                {
+                    restartButton.Enabled = true;
+                    WindowState = FormWindowState.Minimized;
+                })),
                 operationCancellation.Token);
             SetStatus(result.Message, result.Success);
             if (!result.Success)
@@ -284,6 +324,43 @@ internal sealed class MainForm : Form
         if (!result.Success)
             MessageBox.Show(this, result.Message, "Não foi possível jogar vanilla",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+
+    private async Task RestartGameAsync()
+    {
+        if (!gameSession.IsSessionActive || !GameSessionManager.IsPalworldRunning())
+        {
+            SetStatus(
+                "O reinício fica disponível durante uma sessão iniciada com mods.",
+                false);
+            restartButton.Enabled = false;
+            return;
+        }
+        if (MessageBox.Show(
+                this,
+                "Reiniciar o Palworld agora?\n\n" +
+                "Salve o mundo antes de continuar. Os mesmos mods permanecerão ativos.",
+                "Reiniciar jogo",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning) != DialogResult.Yes)
+            return;
+
+        restartButton.Enabled = false;
+        SetStatus("Encerrando e reiniciando o Palworld...", true);
+        var result = await gameSession.RestartAsync(
+            operationCancellation?.Token ?? CancellationToken.None);
+        SetStatus(result.Message, result.Success);
+        restartButton.Enabled =
+            result.Success &&
+            gameSession.IsSessionActive &&
+            GameSessionManager.IsPalworldRunning();
+        if (!result.Success)
+            MessageBox.Show(
+                this,
+                result.Message,
+                "Não foi possível reiniciar",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
     }
 
     private void RemoveMods()
@@ -454,6 +531,7 @@ internal sealed class MainForm : Form
                 ? $"Versão instalada: {latest.Version.ToString(3)} — atualizada"
                 : "Versão instalada: " + (coordinator.ReadState(root)?.Version ?? "não instalada");
             SetStatus(result.Message, result.Success);
+            if (result.Success) RefreshGameState();
             if (!result.Success)
                 MessageBox.Show(this, result.Message, "Falha na atualização", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return result.Success;
@@ -513,9 +591,18 @@ internal sealed class MainForm : Form
         pathTextBox.Enabled = !busy;
         checkButton.Enabled = !busy && ResolvedGameRoot is not null;
         vanillaButton.Enabled = !busy && ResolvedGameRoot is not null;
-        moddedButton.Enabled = !busy && ResolvedGameRoot is not null;
+        moddedButton.Enabled =
+            !busy &&
+            ResolvedGameRoot is not null &&
+            modSelectionPanel.SelectedModIds.Count > 0;
         removeButton.Enabled = !busy && ResolvedGameRoot is { } root && uninstaller.HasInstalledContent(root);
+        restartButton.Enabled =
+            ResolvedGameRoot is not null &&
+            gameSession.IsSessionActive &&
+            !gameSession.IsRestarting &&
+            GameSessionManager.IsPalworldRunning();
         installButton.Enabled = !busy && !installationManager.IsRunningInstalled;
+        modSelectionPanel.SetInteractionEnabled(!busy && ResolvedGameRoot is not null);
         progressBar.Visible = busy && showProgress;
         if (!progressBar.Visible) progressBar.Value = 0;
         SetStatus(message, success);
@@ -525,5 +612,19 @@ internal sealed class MainForm : Form
     {
         statusLabel.Text = message;
         statusLabel.ForeColor = success ? Theme.Accent : Theme.Muted;
+    }
+
+    private void SaveModSelection()
+    {
+        var root = ResolvedGameRoot;
+        if (root is null) return;
+        var selected = modSelectionPanel.SelectedModIds;
+        LauncherSettingsStore.Save(root, selected);
+        moddedButton.Enabled = operationCancellation is null && selected.Count > 0;
+        SetStatus(
+            selected.Count == 0
+                ? "Selecione pelo menos um mod para jogar pelo launcher."
+                : $"{selected.Count} mod(s) selecionado(s) para a próxima sessão.",
+            selected.Count > 0);
     }
 }
