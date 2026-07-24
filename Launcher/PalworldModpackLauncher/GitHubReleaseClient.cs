@@ -19,7 +19,7 @@ internal sealed class GitHubReleaseClient : IDisposable
 
     public GitHubReleaseClient()
     {
-        httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("PalworldModpackLauncher/1.0");
+        httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Palncher/2.0");
         httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         httpClient.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
     }

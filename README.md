@@ -1,6 +1,6 @@
-# Palworld Modpack
+# Palncher
 
-Modpack de cliente para o servidor de amigos do Bahiaaaa. O launcher consulta as
+Modpack de cliente para o servidor de amigos do Bahiaaaa. O **Palncher** consulta as
 [GitHub Releases](https://github.com/iBahiaaaa/palworld-modpack/releases), atualiza
 o modpack e o próprio launcher e abre o Palworld pela Steam.
 
@@ -8,7 +8,7 @@ o modpack e o próprio launcher e abre o Palworld pela Steam.
 
 1. Baixe `Palworld-Modpack-Launcher.exe` na Release mais recente.
 2. Feche o Palworld.
-3. Abra o launcher e confirme a pasta detectada.
+3. Abra o Palncher e confirme a pasta detectada.
 4. Aguarde a atualização automática.
 5. Clique em **Jogar com mods**.
 
@@ -25,7 +25,7 @@ O botão **Remover mods** cria um backup e apaga somente os arquivos gerenciados
 pelo modpack. Outros diretórios de mods são preservados. Para reinstalar, basta
 usar **Jogar com mods** novamente.
 
-O botão **Instalar launcher** copia o aplicativo para o perfil local do Windows
+O botão **Instalar** copia o Palncher para o perfil local do Windows
 e cria atalhos na Área de Trabalho e no Menu Iniciar, sem pedir acesso de
 administrador. A autoatualização passa a substituir essa cópia instalada.
 
@@ -84,10 +84,10 @@ limitados a uma unidade.
 
 ```powershell
 .\Release\build-modpack-package.ps1 -Version 0.7.0
-.\Launcher\build-launcher.ps1 -Version 1.7.0
-.\Launcher\test-launcher.ps1 -ModpackVersion 0.7.0 -LauncherVersion 1.7.0
+.\Launcher\build-launcher.ps1 -Version 2.0.0
+.\Launcher\test-launcher.ps1 -ModpackVersion 0.8.0 -LauncherVersion 2.0.0
 .\Launcher\test-modpack-update.ps1
-.\Launcher\test-self-update.ps1 -LauncherVersion 1.7.0
+.\Launcher\test-self-update.ps1 -LauncherVersion 2.0.0
 ```
 
 ## Publicar uma atualização
@@ -95,7 +95,7 @@ limitados a uma unidade.
 Atualize o número da versão e execute:
 
 ```powershell
-.\Release\publish-release.ps1 -ModpackVersion 0.7.0 -LauncherVersion 1.7.0
+.\Release\publish-release.ps1 -ModpackVersion 0.8.0 -LauncherVersion 2.0.0
 ```
 
 O script monta o pacote, compila o launcher, executa o teste completo e cria a
@@ -105,7 +105,7 @@ Se uma publicação falhar somente durante o upload, repita sem recompilar os
 arquivos que já passaram nos testes:
 
 ```powershell
-.\Release\publish-release.ps1 -ModpackVersion 0.7.0 -LauncherVersion 1.7.0 -SkipBuild
+.\Release\publish-release.ps1 -ModpackVersion 0.8.0 -LauncherVersion 2.0.0 -SkipBuild
 ```
 
 ## Licenças

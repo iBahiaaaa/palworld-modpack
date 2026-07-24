@@ -52,7 +52,7 @@ internal sealed class LauncherSelfUpdater : IDisposable
             Process.Start(startInfo);
 
             return new OperationResult(true,
-                $"Launcher {update.Version.ToString(3)} baixado. Reiniciando para concluir a atualização.");
+                $"Palncher {update.Version.ToString(3)} baixado. Reiniciando para concluir a atualização.");
         }
         catch (Exception exception)
         {

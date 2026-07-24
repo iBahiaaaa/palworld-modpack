@@ -2,7 +2,7 @@ using System.Drawing;
 
 namespace PalworldModpackLauncher;
 
-internal sealed class ModSelectionPanel : UserControl
+internal sealed class ModSelectionPanel : SurfacePanel
 {
     private readonly FlowLayoutPanel optionsFlow;
     private readonly Label emptyLabel;
@@ -13,17 +13,20 @@ internal sealed class ModSelectionPanel : UserControl
 
     public ModSelectionPanel()
     {
-        Height = 180;
-        Dock = DockStyle.Top;
-        BackColor = Theme.Panel;
-        Padding = new Padding(18, 14, 18, 14);
+        Height = 230;
+        Dock = DockStyle.Fill;
+        BackColor = Theme.Surface;
+        Padding = new Padding(16, 13, 16, 12);
+        Margin = new Padding(0, 0, 0, 12);
 
         var layout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
             RowCount = 3,
-            BackColor = Theme.Panel,
+            BackColor = Theme.Surface,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty,
         };
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -31,18 +34,19 @@ internal sealed class ModSelectionPanel : UserControl
 
         var title = new Label
         {
-            Text = "Mods desta sessão",
+            Text = "MODS DESTA SESSÃO",
             AutoSize = true,
-            ForeColor = Theme.Text,
-            Font = new Font("Segoe UI Semibold", 11F, FontStyle.Bold),
-            Margin = new Padding(0, 0, 0, 2),
+            ForeColor = Theme.Soft,
+            Font = new Font("Segoe UI Semibold", 8F, FontStyle.Bold),
+            Margin = new Padding(0, 0, 0, 3),
         };
         var subtitle = new Label
         {
             Text = "Somente os selecionados serão carregados ao clicar em Jogar com mods.",
             AutoSize = true,
             ForeColor = Theme.Muted,
-            Margin = new Padding(0, 0, 0, 9),
+            Font = new Font("Segoe UI", 9F),
+            Margin = new Padding(0, 0, 0, 10),
         };
 
         optionsFlow = new FlowLayoutPanel
@@ -51,7 +55,7 @@ internal sealed class ModSelectionPanel : UserControl
             AutoScroll = true,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = true,
-            BackColor = Theme.Panel,
+            BackColor = Theme.Surface,
             Margin = Padding.Empty,
             Padding = Padding.Empty,
         };
@@ -59,7 +63,7 @@ internal sealed class ModSelectionPanel : UserControl
         {
             Text = "Nenhum mod selecionável foi encontrado.",
             AutoSize = true,
-            ForeColor = Theme.Muted,
+            ForeColor = Theme.Soft,
             Margin = new Padding(0, 8, 0, 0),
         };
 
@@ -96,24 +100,7 @@ internal sealed class ModSelectionPanel : UserControl
 
             foreach (var option in options)
             {
-                var checkBox = new CheckBox
-                {
-                    Tag = option.Id,
-                    Text = option.DisplayName + Environment.NewLine + option.Description,
-                    Checked = selectedSet.Contains(option.Id),
-                    AutoSize = false,
-                    Height = 48,
-                    FlatStyle = FlatStyle.Flat,
-                    BackColor = Theme.Panel,
-                    ForeColor = Theme.Text,
-                    Font = new Font("Segoe UI", 9F),
-                    TextAlign = ContentAlignment.MiddleLeft,
-                    Padding = new Padding(2, 0, 5, 0),
-                    Margin = new Padding(0, 0, 12, 7),
-                    Cursor = Cursors.Hand,
-                    UseVisualStyleBackColor = false,
-                };
-                checkBox.FlatAppearance.BorderColor = Theme.Border;
+                var checkBox = new ModOptionCard(option, selectedSet.Contains(option.Id));
                 checkBox.CheckedChanged += (_, _) =>
                 {
                     if (!updating) SelectionChanged?.Invoke(this, EventArgs.Empty);
@@ -138,9 +125,9 @@ internal sealed class ModSelectionPanel : UserControl
     private void ResizeOptions()
     {
         if (checkBoxes.Count == 0) return;
-        var available = Math.Max(300, optionsFlow.ClientSize.Width - 18);
-        var columns = available >= 650 ? 2 : 1;
-        var width = Math.Max(280, available / columns - 12);
+        var available = Math.Max(300, optionsFlow.ClientSize.Width - 4);
+        var columns = available >= 680 ? 2 : 1;
+        var width = Math.Max(280, available / columns - 18);
         foreach (var checkBox in checkBoxes) checkBox.Width = width;
     }
 }

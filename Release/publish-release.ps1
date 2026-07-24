@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$ModpackVersion,
-    [string]$LauncherVersion = "1.7.0",
+    [string]$LauncherVersion = "2.0.0",
     [string]$GameRoot,
     [switch]$SkipBuild
 )
@@ -44,10 +44,12 @@ if ($releaseCheck.ExitCode -eq 0) { throw "A Release $tag já existe. Use uma ve
 $notes = @"
 ## Palworld Modpack $ModpackVersion
 
-- Atualização automática pelo launcher.
-- Autoatualização do próprio launcher incluída.
-- O launcher pode atualizar seu executável mesmo com o Palworld aberto.
-- Steam inicia o Palworld vanilla; o launcher ativa os mods somente durante a sessão.
+- Palncher 2.0 com identidade visual minimalista.
+- Paleta do Sistema Academia, com fundo escuro e destaque laranja.
+- Atualização automática pelo Palncher.
+- Autoatualização do próprio Palncher incluída.
+- O Palncher pode atualizar seu executável mesmo com o Palworld aberto.
+- Steam inicia o Palworld vanilla; o Palncher ativa os mods somente durante a sessão.
 - Opção para remover o modpack com backup automático.
 - Instalação local sem administrador, com atalhos na Área de Trabalho e Menu Iniciar.
 - Hover Transfer incluído.

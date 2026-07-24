@@ -7,11 +7,14 @@
     <Nullable>enable</Nullable>
     <AssemblyName>Palworld-Modpack-Launcher</AssemblyName>
     <RootNamespace>PalworldModpackLauncher</RootNamespace>
+    <Title>Palncher</Title>
+    <Product>Palncher</Product>
+    <Description>Launcher minimalista do modpack Palworld.</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
-    <Version>1.6.0</Version>
-    <FileVersion>1.6.0.0</FileVersion>
-    <AssemblyVersion>1.6.0.0</AssemblyVersion>
+    <Version>2.0.0</Version>
+    <FileVersion>2.0.0.0</FileVersion>
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>

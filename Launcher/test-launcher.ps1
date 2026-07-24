@@ -1,6 +1,6 @@
 param(
-    [string]$ModpackVersion = "0.7.0",
-    [string]$LauncherVersion = "1.7.0"
+    [string]$ModpackVersion = "0.8.0",
+    [string]$LauncherVersion = "2.0.0"
 )
 
 $ErrorActionPreference = "Stop"

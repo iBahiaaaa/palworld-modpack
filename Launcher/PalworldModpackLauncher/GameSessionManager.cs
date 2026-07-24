@@ -82,7 +82,7 @@ internal sealed class GameSessionManager
         if (!IsSessionActive)
             return new OperationResult(
                 false,
-                "Inicie o Palworld com mods pelo launcher antes de usar o reinício.");
+                "Inicie o Palworld com mods pelo Palncher antes de usar o reinício.");
         if (!IsPalworldRunning())
             return new OperationResult(false, "O Palworld não está aberto.");
         if (!await restartGate.WaitAsync(0, cancellationToken))

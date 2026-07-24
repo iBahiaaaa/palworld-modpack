@@ -4,10 +4,8 @@ namespace PalworldModpackLauncher;
 
 internal sealed class MainForm : Form
 {
-    private readonly TextBox pathTextBox;
-    private readonly Label versionLabel;
-    private readonly Label statusLabel;
-    private readonly ProgressBar progressBar;
+    private readonly GameLocationPanel locationPanel;
+    private readonly LauncherStatusPanel launcherStatusPanel;
     private readonly Button checkButton;
     private readonly Button installButton;
     private readonly Button removeButton;
@@ -24,163 +22,140 @@ internal sealed class MainForm : Form
     private CancellationTokenSource? operationCancellation;
     private bool closingForUpdate;
     private bool sessionCloseNoticeShown;
+    private readonly bool previewOnly;
 
-    public MainForm()
+    public MainForm(bool previewOnly = false)
     {
-        Text = "Palworld Modpack - Launcher";
+        this.previewOnly = previewOnly;
+        Text = "Palncher";
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(840, 680);
-        MinimumSize = new Size(740, 630);
+        ClientSize = new Size(920, 610);
+        MinimumSize = new Size(820, 590);
         BackColor = Theme.Window;
         ForeColor = Theme.Text;
         Font = new Font("Segoe UI", 10F);
         AutoScaleMode = AutoScaleMode.Dpi;
 
         var content = CreateLayout();
-        var title = new Label
-        {
-            Text = "Palworld Modpack",
-            AutoSize = true,
-            Font = new Font("Segoe UI Semibold", 25F, FontStyle.Bold),
-            ForeColor = Theme.Text,
-            Margin = new Padding(0, 0, 0, 2),
-        };
-        var subtitle = new Label
-        {
-            Text = "Pela Steam o jogo fica vanilla. Por aqui, ele inicia com o modpack.",
-            AutoSize = true,
-            ForeColor = Theme.Muted,
-            Margin = new Padding(2, 0, 0, 22),
-        };
+        var header = new BrandHeader();
 
-        var pathLabel = new Label
+        locationPanel = new GameLocationPanel();
+        locationPanel.GamePathChanged += (_, _) =>
         {
-            Text = "Pasta da Steam ou do Palworld",
-            AutoSize = true,
-            ForeColor = Theme.Text,
-            Margin = new Padding(0, 0, 0, 7),
+            if (!this.previewOnly) RefreshGameState();
         };
-        var pathRow = new TableLayoutPanel
-        {
-            Dock = DockStyle.Top,
-            AutoSize = true,
-            ColumnCount = 3,
-            Margin = new Padding(0, 0, 0, 18),
-        };
-        pathRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        pathRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        pathRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        pathTextBox = new TextBox
-        {
-            Dock = DockStyle.Fill,
-            Height = 36,
-            BackColor = Theme.Panel,
-            ForeColor = Theme.Text,
-            BorderStyle = BorderStyle.FixedSingle,
-            Margin = new Padding(0, 0, 8, 0),
-        };
-        pathTextBox.TextChanged += (_, _) => RefreshGameState();
-        var browseButton = Theme.Button("Selecionar...");
-        browseButton.Margin = new Padding(0, 0, 8, 0);
-        browseButton.Click += (_, _) => Browse();
-        var detectButton = Theme.Button("Detectar");
-        detectButton.Margin = Padding.Empty;
-        detectButton.Click += (_, _) => Detect();
-        pathRow.Controls.Add(pathTextBox, 0, 0);
-        pathRow.Controls.Add(browseButton, 1, 0);
-        pathRow.Controls.Add(detectButton, 2, 0);
+        locationPanel.BrowseRequested += (_, _) => Browse();
+        locationPanel.DetectRequested += (_, _) => Detect();
 
-        var infoPanel = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            BackColor = Theme.Panel,
-            Padding = new Padding(18),
-            RowCount = 3,
-            ColumnCount = 1,
-            Margin = new Padding(0, 0, 0, 18),
-        };
-        infoPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        infoPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        infoPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        versionLabel = new Label
-        {
-            AutoSize = true,
-            Text = "Versão instalada: verificando...",
-            ForeColor = Theme.Accent,
-            Font = new Font("Segoe UI Semibold", 11F, FontStyle.Bold),
-            Margin = new Padding(0, 0, 0, 12),
-        };
-        statusLabel = new Label
-        {
-            Dock = DockStyle.Fill,
-            Text = "Localizando o Palworld...",
-            ForeColor = Theme.Muted,
-            AutoEllipsis = true,
-        };
-        progressBar = new ProgressBar
-        {
-            Dock = DockStyle.Bottom,
-            Height = 8,
-            Minimum = 0,
-            Maximum = 100,
-            Visible = false,
-            Style = ProgressBarStyle.Continuous,
-            Margin = new Padding(0, 14, 0, 0),
-        };
-        infoPanel.Controls.Add(versionLabel, 0, 0);
-        infoPanel.Controls.Add(statusLabel, 0, 1);
-        infoPanel.Controls.Add(progressBar, 0, 2);
+        launcherStatusPanel = new LauncherStatusPanel();
 
-        modSelectionPanel = new ModSelectionPanel
-        {
-            Margin = new Padding(0, 0, 0, 18),
-        };
+        modSelectionPanel = new ModSelectionPanel();
         modSelectionPanel.SelectionChanged += (_, _) => SaveModSelection();
 
-        var actions = new FlowLayoutPanel
+        var actions = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            ColumnCount = 2,
+            RowCount = 1,
+            BackColor = Theme.Window,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty,
+        };
+        actions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        actions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+
+        var tools = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            BackColor = Theme.Window,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty,
+        };
+        var playActions = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
             AutoSize = true,
             FlowDirection = FlowDirection.RightToLeft,
-            WrapContents = true,
+            WrapContents = false,
+            BackColor = Theme.Window,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty,
         };
-        moddedButton = Theme.Button("Jogar com mods", primary: true);
+
+        moddedButton = Theme.Button("Jogar com mods", ButtonKind.Primary);
+        moddedButton.Margin = Padding.Empty;
         moddedButton.Enabled = false;
         moddedButton.Click += async (_, _) => await PlayModdedAsync();
-        restartButton = Theme.Button("Reiniciar jogo");
+        restartButton = Theme.Button("Reiniciar");
         restartButton.Enabled = false;
         restartButton.Click += async (_, _) => await RestartGameAsync();
         vanillaButton = Theme.Button("Jogar vanilla");
         vanillaButton.Enabled = false;
         vanillaButton.Click += (_, _) => PlayVanilla();
-        removeButton = Theme.Button("Remover mods");
+        removeButton = Theme.Button("Remover", ButtonKind.Danger);
         removeButton.Enabled = false;
         removeButton.Click += (_, _) => RemoveMods();
-        installButton = Theme.Button("Instalar launcher");
+        installButton = Theme.Button("Instalar", ButtonKind.Subtle);
         installButton.Click += (_, _) => InstallLauncher();
-        checkButton = Theme.Button("Verificar atualização");
+        checkButton = Theme.Button("Atualizar", ButtonKind.Subtle);
         checkButton.Enabled = false;
         checkButton.Click += async (_, _) => await CheckAndUpdateAsync(automatic: false);
-        actions.Controls.Add(moddedButton);
-        actions.Controls.Add(restartButton);
-        actions.Controls.Add(vanillaButton);
-        actions.Controls.Add(removeButton);
-        actions.Controls.Add(installButton);
-        actions.Controls.Add(checkButton);
+
+        tools.Controls.Add(checkButton);
+        tools.Controls.Add(installButton);
+        tools.Controls.Add(removeButton);
+        playActions.Controls.Add(moddedButton);
+        playActions.Controls.Add(restartButton);
+        playActions.Controls.Add(vanillaButton);
+        actions.Controls.Add(tools, 0, 0);
+        actions.Controls.Add(playActions, 1, 0);
         RefreshInstallButton();
 
-        content.Controls.Add(title, 0, 0);
-        content.Controls.Add(subtitle, 0, 1);
-        content.Controls.Add(pathLabel, 0, 2);
-        content.Controls.Add(pathRow, 0, 3);
-        content.Controls.Add(infoPanel, 0, 4);
-        content.Controls.Add(modSelectionPanel, 0, 5);
-        content.Controls.Add(actions, 0, 6);
+        content.Controls.Add(header, 0, 0);
+        content.Controls.Add(locationPanel, 0, 1);
+        content.Controls.Add(launcherStatusPanel, 0, 2);
+        content.Controls.Add(modSelectionPanel, 0, 3);
+        content.Controls.Add(actions, 0, 4);
         Controls.Add(content);
 
-        Shown += async (_, _) => await InitializeAsync();
-        FormClosing += HandleFormClosing;
-        FormClosed += (_, _) => Cleanup();
+        if (previewOnly)
+        {
+            LoadPreview();
+        }
+        else
+        {
+            Shown += async (_, _) => await InitializeAsync();
+            FormClosing += HandleFormClosing;
+            FormClosed += (_, _) => Cleanup();
+        }
+    }
+
+    private void LoadPreview()
+    {
+        locationPanel.GamePath = @"E:\SteamLibrary\steamapps\common\Palworld";
+        launcherStatusPanel.VersionText = "MODPACK  ·  0.8.0  ·  atualizado";
+        launcherStatusPanel.SetStatus(
+            "Palworld encontrado  ·  Steam: vanilla  ·  Palncher: mods selecionados",
+            true);
+        var options = new[]
+        {
+            new ModOption("HoverTransfer", "Distribuidor rápido de itens", "Passe o mouse e pressione H para mover.", true),
+            new ModOption("AltTabWorkContinuation", "Fabricação durante Alt+Tab", "Mantém a fabricação quando o jogo perde foco.", true),
+            new ModOption("AccessorySlotsResearch", "Slots extras de acessórios", "Expande e salva até 10 espaços.", true),
+            new ModOption("ItemStackExtender", "Pilhas de itens até 100.000", "Aumenta o limite dos itens empilháveis.", true),
+        };
+        modSelectionPanel.SetMods(options, options.Select(option => option.Id).ToArray());
+        checkButton.Enabled = true;
+        vanillaButton.Enabled = true;
+        moddedButton.Enabled = true;
+        removeButton.Enabled = true;
+        installButton.Text = "Instalado";
+        installButton.Enabled = false;
+        installButton.Visible = false;
     }
 
     private static TableLayoutPanel CreateLayout()
@@ -188,25 +163,25 @@ internal sealed class MainForm : Form
         var content = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(30, 25, 30, 24),
+            Padding = new Padding(24, 20, 24, 20),
             ColumnCount = 1,
-            RowCount = 7,
+            RowCount = 5,
             BackColor = Theme.Window,
         };
-        content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        content.RowStyles.Add(new RowStyle(SizeType.Absolute, 78));
+        content.RowStyles.Add(new RowStyle(SizeType.Absolute, 104));
+        content.RowStyles.Add(new RowStyle(SizeType.Absolute, 102));
         content.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        content.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
         return content;
     }
 
-    private string? ResolvedGameRoot => PalworldLocator.Resolve(pathTextBox.Text);
+    private string? ResolvedGameRoot => PalworldLocator.Resolve(locationPanel.GamePath);
 
     private async Task InitializeAsync()
     {
+        installationManager.RefreshBranding();
+        RefreshInstallButton();
         Detect();
         var root = ResolvedGameRoot;
         if (root is null) return;
@@ -227,7 +202,7 @@ internal sealed class MainForm : Form
             SetStatus("Não encontrei o Palworld. Clique em Selecionar.", false);
             return;
         }
-        pathTextBox.Text = detected;
+        locationPanel.GamePath = detected;
     }
 
     private void Browse()
@@ -238,8 +213,8 @@ internal sealed class MainForm : Form
             UseDescriptionForTitle = true,
             ShowNewFolderButton = false,
         };
-        if (Directory.Exists(pathTextBox.Text)) dialog.InitialDirectory = pathTextBox.Text;
-        if (dialog.ShowDialog(this) == DialogResult.OK) pathTextBox.Text = dialog.SelectedPath;
+        if (Directory.Exists(locationPanel.GamePath)) dialog.InitialDirectory = locationPanel.GamePath;
+        if (dialog.ShowDialog(this) == DialogResult.OK) locationPanel.GamePath = dialog.SelectedPath;
     }
 
     private void RefreshGameState()
@@ -254,7 +229,7 @@ internal sealed class MainForm : Form
         {
             modSelectionPanel.SetMods(Array.Empty<ModOption>(), Array.Empty<string>());
             modSelectionPanel.SetInteractionEnabled(false);
-            versionLabel.Text = "Versão instalada: —";
+            launcherStatusPanel.VersionText = "MODPACK  ·  não instalado";
             SetStatus("A pasta selecionada não contém uma instalação válida do Palworld.", false);
             return;
         }
@@ -266,8 +241,8 @@ internal sealed class MainForm : Form
         modSelectionPanel.SetMods(options, selected);
         modSelectionPanel.SetInteractionEnabled(true);
         LauncherSettingsStore.Save(root!, selected);
-        versionLabel.Text = "Versão instalada: " + (state?.Version ?? "não instalada");
-        SetStatus($"Palworld encontrado em:\n{root}\nSteam: vanilla | Launcher: com mods", true);
+        launcherStatusPanel.VersionText = "MODPACK  ·  " + (state?.Version ?? "não instalado");
+        SetStatus($"Palworld encontrado em:\n{root}\nSteam: vanilla  ·  Palncher: mods selecionados", true);
         moddedButton.Enabled = selected.Count > 0;
     }
 
@@ -311,7 +286,7 @@ internal sealed class MainForm : Form
         {
             operationCancellation.Dispose();
             operationCancellation = null;
-            SetBusy(false, statusLabel.Text, statusLabel.ForeColor == Theme.Accent);
+            SetBusy(false, launcherStatusPanel.StatusText, launcherStatusPanel.StatusSuccess);
         }
     }
 
@@ -383,7 +358,7 @@ internal sealed class MainForm : Form
 
         SetBusy(true, "Criando backup e removendo os mods...");
         var result = uninstaller.Uninstall(root);
-        if (result.Success) versionLabel.Text = "Versão instalada: não instalada";
+        if (result.Success) launcherStatusPanel.VersionText = "MODPACK  ·  não instalado";
         SetBusy(false, result.Message, result.Success);
         MessageBox.Show(this,
             result.Message,
@@ -396,14 +371,14 @@ internal sealed class MainForm : Form
     {
         if (!installationManager.IsInstalled &&
             MessageBox.Show(this,
-                "Instalar o launcher neste computador?\n\n" +
+                "Instalar o Palncher neste computador?\n\n" +
                 "Serão criados atalhos na Área de Trabalho e no Menu Iniciar. Não é necessário acesso de administrador.",
-                "Instalar launcher",
+                "Instalar Palncher",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question) != DialogResult.Yes)
             return;
 
-        SetBusy(true, "Instalando o launcher e criando os atalhos...");
+        SetBusy(true, "Instalando o Palncher e criando os atalhos...");
         var result = installationManager.Install();
         SetBusy(false, result.Message, result.Success);
         if (!result.Success)
@@ -416,7 +391,7 @@ internal sealed class MainForm : Form
         RefreshInstallButton();
         if (MessageBox.Show(this,
                 result.Message + "\n\nAbrir agora a versão instalada?",
-                "Launcher instalado",
+                "Palncher instalado",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Information) != DialogResult.Yes)
             return;
@@ -436,14 +411,16 @@ internal sealed class MainForm : Form
     {
         if (installationManager.IsRunningInstalled)
         {
-            installButton.Text = "Launcher instalado";
+            installButton.Text = "Instalado";
             installButton.Enabled = false;
+            installButton.Visible = false;
             return;
         }
 
+        installButton.Visible = true;
         installButton.Text = installationManager.IsInstalled
-            ? "Atualizar instalação"
-            : "Instalar launcher";
+            ? "Atualizar app"
+            : "Instalar";
         installButton.Enabled = true;
     }
 
@@ -451,14 +428,14 @@ internal sealed class MainForm : Form
     {
         if (operationCancellation is not null) return false;
         operationCancellation = new CancellationTokenSource();
-        SetBusy(true, "Verificando atualização do launcher...");
+        SetBusy(true, "Verificando atualização do Palncher...");
         try
         {
             var update = await selfUpdater.CheckAsync(operationCancellation.Token);
             if (update is null) return false;
 
-            SetBusy(true, $"Baixando o launcher {update.Version.ToString(3)}...", showProgress: true);
-            var progress = new Progress<int>(value => progressBar.Value = value);
+            SetBusy(true, $"Baixando o Palncher {update.Version.ToString(3)}...", showProgress: true);
+            var progress = new Progress<int>(value => launcherStatusPanel.ProgressValue = value);
             var result = await selfUpdater.DownloadAndRestartAsync(update, progress, operationCancellation.Token);
             SetStatus(result.Message, result.Success);
             if (!result.Success) return false;
@@ -469,12 +446,12 @@ internal sealed class MainForm : Form
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
         {
-            SetStatus("Não foi possível verificar o launcher agora. Continuando com a versão atual.", false);
+            SetStatus("Não foi possível verificar o Palncher agora. Continuando com a versão atual.", false);
             return false;
         }
         catch (Exception exception)
         {
-            SetStatus("Não foi possível atualizar o launcher agora: " + exception.Message, false);
+            SetStatus("Não foi possível atualizar o Palncher agora: " + exception.Message, false);
             return false;
         }
         finally
@@ -482,7 +459,7 @@ internal sealed class MainForm : Form
             operationCancellation.Dispose();
             operationCancellation = null;
             if (!closingForUpdate)
-                SetBusy(false, statusLabel.Text, statusLabel.ForeColor == Theme.Accent);
+                SetBusy(false, launcherStatusPanel.StatusText, launcherStatusPanel.StatusSuccess);
         }
     }
 
@@ -499,7 +476,7 @@ internal sealed class MainForm : Form
             var (latest, needsUpdate) = await coordinator.CheckAsync(root, operationCancellation.Token);
             if (!needsUpdate)
             {
-                versionLabel.Text = $"Versão instalada: {latest.Version.ToString(3)} — atualizada";
+                launcherStatusPanel.VersionText = $"MODPACK  ·  {latest.Version.ToString(3)}  ·  atualizado";
                 SetStatus("Seu modpack já está atualizado. Steam permanece vanilla.", true);
                 return true;
             }
@@ -521,15 +498,15 @@ internal sealed class MainForm : Form
             }
 
             SetBusy(true, $"Baixando o modpack {latest.Version.ToString(3)}...", showProgress: true);
-            var progress = new Progress<int>(value => progressBar.Value = value);
+            var progress = new Progress<int>(value => launcherStatusPanel.ProgressValue = value);
             var result = await coordinator.DownloadAndApplyAsync(
                 root,
                 latest,
                 progress,
                 operationCancellation.Token);
-            versionLabel.Text = result.Success
-                ? $"Versão instalada: {latest.Version.ToString(3)} — atualizada"
-                : "Versão instalada: " + (coordinator.ReadState(root)?.Version ?? "não instalada");
+            launcherStatusPanel.VersionText = result.Success
+                ? $"MODPACK  ·  {latest.Version.ToString(3)}  ·  atualizado"
+                : "MODPACK  ·  " + (coordinator.ReadState(root)?.Version ?? "não instalado");
             SetStatus(result.Message, result.Success);
             if (result.Success) RefreshGameState();
             if (!result.Success)
@@ -556,7 +533,7 @@ internal sealed class MainForm : Form
         {
             operationCancellation.Dispose();
             operationCancellation = null;
-            SetBusy(false, statusLabel.Text, statusLabel.ForeColor == Theme.Accent);
+            SetBusy(false, launcherStatusPanel.StatusText, launcherStatusPanel.StatusSuccess);
         }
     }
 
@@ -570,7 +547,7 @@ internal sealed class MainForm : Form
         if (sessionCloseNoticeShown) return;
         sessionCloseNoticeShown = true;
         MessageBox.Show(this,
-            "O launcher continuará minimizado até o Palworld fechar para desativar os mods com segurança.",
+            "O Palncher continuará minimizado até o Palworld fechar para desativar os mods com segurança.",
             "Sessão com mods ativa",
             MessageBoxButtons.OK,
             MessageBoxIcon.Information);
@@ -588,7 +565,7 @@ internal sealed class MainForm : Form
 
     private void SetBusy(bool busy, string message, bool success = true, bool showProgress = false)
     {
-        pathTextBox.Enabled = !busy;
+        locationPanel.SetInteractionEnabled(!busy);
         checkButton.Enabled = !busy && ResolvedGameRoot is not null;
         vanillaButton.Enabled = !busy && ResolvedGameRoot is not null;
         moddedButton.Enabled =
@@ -603,15 +580,13 @@ internal sealed class MainForm : Form
             GameSessionManager.IsPalworldRunning();
         installButton.Enabled = !busy && !installationManager.IsRunningInstalled;
         modSelectionPanel.SetInteractionEnabled(!busy && ResolvedGameRoot is not null);
-        progressBar.Visible = busy && showProgress;
-        if (!progressBar.Visible) progressBar.Value = 0;
+        launcherStatusPanel.SetProgressVisible(busy && showProgress);
         SetStatus(message, success);
     }
 
     private void SetStatus(string message, bool success)
     {
-        statusLabel.Text = message;
-        statusLabel.ForeColor = success ? Theme.Accent : Theme.Muted;
+        launcherStatusPanel.SetStatus(message, success);
     }
 
     private void SaveModSelection()
@@ -623,7 +598,7 @@ internal sealed class MainForm : Form
         moddedButton.Enabled = operationCancellation is null && selected.Count > 0;
         SetStatus(
             selected.Count == 0
-                ? "Selecione pelo menos um mod para jogar pelo launcher."
+                ? "Selecione pelo menos um mod para jogar pelo Palncher."
                 : $"{selected.Count} mod(s) selecionado(s) para a próxima sessão.",
             selected.Count > 0);
     }

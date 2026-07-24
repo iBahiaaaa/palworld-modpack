@@ -1,5 +1,5 @@
 param(
-    [string]$LauncherVersion = "1.4.0"
+    [string]$LauncherVersion = "2.0.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -50,8 +50,8 @@ $installProcess.WaitForExit()
 if ($installProcess.ExitCode -ne 0) { throw "Instalação local do launcher falhou: $($installProcess.ExitCode)" }
 
 $installedExecutable = Join-Path $installRoot "AppData\Palworld-Modpack-Launcher.exe"
-$desktopShortcut = Join-Path $installRoot "Desktop\Palworld Modpack Launcher.lnk"
-$startMenuShortcut = Join-Path $installRoot "StartMenu\Palworld Modpack Launcher.lnk"
+$desktopShortcut = Join-Path $installRoot "Desktop\Palncher.lnk"
+$startMenuShortcut = Join-Path $installRoot "StartMenu\Palncher.lnk"
 foreach ($path in @($installedExecutable, $desktopShortcut, $startMenuShortcut)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Arquivo da instalação ausente: $path" }
 }

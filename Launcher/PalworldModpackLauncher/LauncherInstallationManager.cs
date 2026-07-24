@@ -6,7 +6,8 @@ namespace PalworldModpackLauncher;
 internal sealed class LauncherInstallationManager
 {
     private const string ExecutableName = "Palworld-Modpack-Launcher.exe";
-    private const string ShortcutName = "Palworld Modpack Launcher.lnk";
+    private const string ShortcutName = "Palncher.lnk";
+    private const string LegacyShortcutName = "Palworld Modpack Launcher.lnk";
 
     public string InstalledExecutablePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -26,10 +27,16 @@ internal sealed class LauncherInstallationManager
             Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
             "Programs",
             "Bahiaaaa");
-        return InstallTo(
+        var result = InstallTo(
             InstalledExecutablePath,
             Path.Combine(desktop, ShortcutName),
             Path.Combine(startMenu, ShortcutName));
+        if (result.Success)
+        {
+            TryDelete(Path.Combine(desktop, LegacyShortcutName));
+            TryDelete(Path.Combine(startMenu, LegacyShortcutName));
+        }
+        return result;
     }
 
     public OperationResult InstallForTest(string testRoot)
@@ -48,7 +55,7 @@ internal sealed class LauncherInstallationManager
             if (!File.Exists(InstalledExecutablePath))
                 return new OperationResult(false, "A instalação local do launcher não foi encontrada.");
             Process.Start(new ProcessStartInfo(InstalledExecutablePath) { UseShellExecute = true });
-            return new OperationResult(true, "Launcher instalado iniciado.");
+            return new OperationResult(true, "Palncher instalado iniciado.");
         }
         catch (Exception exception)
         {
@@ -79,7 +86,7 @@ internal sealed class LauncherInstallationManager
             CreateShortcut(desktopShortcut, destination);
             CreateShortcut(startMenuShortcut, destination);
             return new OperationResult(true,
-                "Launcher instalado com sucesso.\n\n" +
+                "Palncher instalado com sucesso.\n\n" +
                 "Atalhos criados na Área de Trabalho e no Menu Iniciar.");
         }
         catch (Exception exception)
@@ -116,7 +123,7 @@ internal sealed class LauncherInstallationManager
             shortcutType.InvokeMember("IconLocation", System.Reflection.BindingFlags.SetProperty, null, shortcut,
                 new object[] { executablePath + ",0" });
             shortcutType.InvokeMember("Description", System.Reflection.BindingFlags.SetProperty, null, shortcut,
-                new object[] { "Atualiza e inicia o Palworld com o modpack." });
+                new object[] { "Palncher: atualiza e inicia o Palworld com o modpack." });
             shortcutType.InvokeMember("Save", System.Reflection.BindingFlags.InvokeMethod, null, shortcut, null);
         }
         finally
@@ -130,5 +137,38 @@ internal sealed class LauncherInstallationManager
     {
         if (string.IsNullOrWhiteSpace(first) || string.IsNullOrWhiteSpace(second)) return false;
         return Path.GetFullPath(first).Equals(Path.GetFullPath(second), StringComparison.OrdinalIgnoreCase);
+    }
+
+    public void RefreshBranding()
+    {
+        if (!IsInstalled) return;
+        try
+        {
+            var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+            var startMenu = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
+                "Programs",
+                "Bahiaaaa");
+            CreateShortcut(Path.Combine(desktop, ShortcutName), InstalledExecutablePath);
+            CreateShortcut(Path.Combine(startMenu, ShortcutName), InstalledExecutablePath);
+            TryDelete(Path.Combine(desktop, LegacyShortcutName));
+            TryDelete(Path.Combine(startMenu, LegacyShortcutName));
+        }
+        catch
+        {
+            // A identidade visual do atalho será atualizada na próxima instalação manual.
+        }
+    }
+
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+        catch
+        {
+            // Um atalho em uso não deve impedir o funcionamento do Palncher.
+        }
     }
 }
