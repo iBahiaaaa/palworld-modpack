@@ -11,6 +11,14 @@ internal static class CommandLine
                 "--apply-local" => ApplyLocal(args),
                 "--status" => Status(args),
                 "--check-release" => CheckRelease().GetAwaiter().GetResult(),
+                "--check-launcher-release" => CheckLauncherRelease().GetAwaiter().GetResult(),
+                "--activate-mods" => SetModState(args, activate: true),
+                "--disable-mods" => SetModState(args, activate: false),
+                "--list-mods" => ListMods(args),
+                "--set-enabled-mods" => SetEnabledMods(args),
+                "--uninstall-modpack" => UninstallModpack(args),
+                "--install-launcher-test" => InstallLauncherTest(args),
+                "--replace-launcher" => LauncherSelfUpdater.ReplaceAndRestart(args),
                 _ => Fail("Comando desconhecido."),
             };
         }
@@ -46,6 +54,65 @@ internal static class CommandLine
         var update = await client.GetLatestAsync();
         Console.WriteLine($"{update.Version.ToString(3)}|{update.Package.Name}|{update.Package.Size}");
         return 0;
+    }
+
+    private static async Task<int> CheckLauncherRelease()
+    {
+        using var client = new GitHubReleaseClient();
+        var update = await client.GetLatestLauncherAsync();
+        if (update is null) return Fail("A Release ainda não publica atualizações do launcher.");
+        Console.WriteLine($"{update.Version.ToString(3)}|{update.Executable.Name}|{update.Executable.Size}");
+        return 0;
+    }
+
+    private static int SetModState(string[] args, bool activate)
+    {
+        if (args.Length != 2) return Fail($"Uso: {args[0]} <pasta>");
+        var manager = new ModActivationManager();
+        var result = activate
+            ? manager.Activate(args[1])
+            : manager.EnsureVanilla(args[1], new ModpackInstaller().ReadState(args[1]));
+        Console.WriteLine(result.Message);
+        return result.Success ? 0 : 1;
+    }
+
+    private static int ListMods(string[] args)
+    {
+        if (args.Length != 2) return Fail("Uso: --list-mods <pasta>");
+        var state = new ModpackInstaller().ReadState(args[1]);
+        var service = new ModSelectionService();
+        foreach (var option in service.Discover(args[1], state))
+            Console.WriteLine($"{option.Id}|{option.DisplayName}|{option.EnabledByDefault}");
+        return 0;
+    }
+
+    private static int SetEnabledMods(string[] args)
+    {
+        if (args.Length != 3) return Fail("Uso: --set-enabled-mods <pasta> <mod1,mod2>");
+        var selected = args[2]
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var state = new ModpackInstaller().ReadState(args[1]);
+        var result = new ModSelectionService().ApplySelection(args[1], selected, state);
+        Console.WriteLine(result.Message);
+        return result.Success ? 0 : 1;
+    }
+
+    private static int UninstallModpack(string[] args)
+    {
+        if (args.Length != 2) return Fail("Uso: --uninstall-modpack <pasta>");
+        var result = new ModpackUninstaller().Uninstall(args[1]);
+        Console.WriteLine(result.Message);
+        return result.Success ? 0 : 1;
+    }
+
+    private static int InstallLauncherTest(string[] args)
+    {
+        if (args.Length != 2) return Fail("Uso: --install-launcher-test <pasta>");
+        var result = new LauncherInstallationManager().InstallForTest(args[1]);
+        Console.WriteLine(result.Message);
+        return result.Success ? 0 : 1;
     }
 
     private static int Fail(string message)

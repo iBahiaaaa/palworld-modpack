@@ -1,6 +1,6 @@
 param(
-    [string]$ModpackVersion = "0.3.0",
-    [string]$LauncherVersion = "1.0.0"
+    [string]$ModpackVersion = "0.8.0",
+    [string]$LauncherVersion = "2.0.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -44,21 +44,64 @@ Invoke-Launcher @("--apply-local", (Join-Path $testRoot "SteamLibrary"), $packag
 Invoke-Launcher @("--status", $gameRoot)
 
 $required = @(
-    (Join-Path $win64 "dwmapi.dll"),
+    (Join-Path $win64 "Palworld-Modpack\loader\dwmapi.dll"),
     (Join-Path $win64 "ue4ss\UE4SS.dll"),
     (Join-Path $win64 "ue4ss\Mods\HoverTransfer\enabled.txt"),
     (Join-Path $win64 "ue4ss\Mods\AltTabWorkContinuation\enabled.txt"),
     (Join-Path $win64 "ue4ss\Mods\AltTabWorkContinuation\Scripts\AltTabWorkContinuationFocus.dll"),
+    (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\enabled.txt"),
+    (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\Scripts\main.lua"),
+    (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\Scripts\slot_limits.lua"),
+    (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\Scripts\equipment_storage.lua"),
+    (Join-Path $win64 "ue4ss\Mods\ItemStackExtender\enabled.txt"),
+    (Join-Path $win64 "ue4ss\Mods\ItemStackExtender\config.json"),
+    (Join-Path $win64 "ue4ss\Mods\ItemStackExtender\Scripts\main.lua"),
+    (Join-Path $win64 "ue4ss\Mods\ItemStackExtender\Scripts\static_data_sync.lua"),
     (Join-Path $win64 "ue4ss\palworld-modpack-state.json"),
     (Join-Path $win64 "arquivo-preservado.txt")
 )
 foreach ($path in $required) {
     if (-not (Test-Path -LiteralPath $path)) { throw "Arquivo esperado não encontrado: $path" }
 }
+if (Test-Path -LiteralPath (Join-Path $win64 "dwmapi.dll")) { throw "O carregador ficou ativo após a instalação." }
 
 $state = Get-Content -LiteralPath (Join-Path $win64 "ue4ss\palworld-modpack-state.json") -Raw | ConvertFrom-Json
 if ($state.version -ne $ModpackVersion) { throw "Versão instalada incorreta: $($state.version)" }
-if ($state.managedFiles.Count -lt 14) { throw "Lista de arquivos gerenciados incompleta." }
+if ($state.managedFiles.Count -lt 34) { throw "Lista de arquivos gerenciados incompleta." }
+
+Invoke-Launcher @("--set-enabled-mods", $gameRoot, "HoverTransfer")
+if (-not (Test-Path -LiteralPath (Join-Path $win64 "ue4ss\Mods\HoverTransfer\enabled.txt"))) {
+    throw "O mod selecionado foi desativado."
+}
+foreach ($disabledMarker in @(
+    (Join-Path $win64 "ue4ss\Mods\AltTabWorkContinuation\enabled.txt"),
+    (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\enabled.txt"),
+    (Join-Path $win64 "ue4ss\Mods\ItemStackExtender\enabled.txt")
+)) {
+    if (Test-Path -LiteralPath $disabledMarker) {
+        throw "Um mod desmarcado permaneceu ativo: $disabledMarker"
+    }
+}
+if (-not (Test-Path -LiteralPath (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\Scripts\main.lua"))) {
+    throw "Desativar um mod removeu os arquivos dele."
+}
+
+Invoke-Launcher @("--activate-mods", $gameRoot)
+if (-not (Test-Path -LiteralPath (Join-Path $win64 "dwmapi.dll"))) { throw "Os mods não foram ativados." }
+Invoke-Launcher @("--disable-mods", $gameRoot)
+if (Test-Path -LiteralPath (Join-Path $win64 "dwmapi.dll")) { throw "Os mods não voltaram ao modo vanilla." }
+
+$conflictingLoader = Join-Path $win64 "dwmapi.dll"
+Set-Content -LiteralPath $conflictingLoader -Value "carregador externo de teste" -Encoding ascii
+$conflictInfo = [Diagnostics.ProcessStartInfo]::new()
+$conflictInfo.FileName = $launcher
+$conflictInfo.Arguments = '"--disable-mods" "' + $gameRoot.Replace('"', '\"') + '"'
+$conflictInfo.UseShellExecute = $false
+$conflictProcess = [Diagnostics.Process]::Start($conflictInfo)
+$conflictProcess.WaitForExit()
+if ($conflictProcess.ExitCode -eq 0) { throw "Um carregador externo foi removido sem bloqueio." }
+if (-not (Test-Path -LiteralPath $conflictingLoader)) { throw "O carregador externo não foi preservado." }
+Remove-Item -LiteralPath $conflictingLoader -Force
 
 $protectedHash = (Get-FileHash -LiteralPath (Join-Path $win64 "ue4ss\UE4SS.dll") -Algorithm SHA256).Hash
 $info = [Diagnostics.ProcessStartInfo]::new()
@@ -70,5 +113,30 @@ $process.WaitForExit()
 if ($process.ExitCode -eq 0) { throw "Pacote com hash inválido foi aceito." }
 $currentHash = (Get-FileHash -LiteralPath (Join-Path $win64 "ue4ss\UE4SS.dll") -Algorithm SHA256).Hash
 if ($currentHash -ne $protectedHash) { throw "O teste de hash alterou a instalação válida." }
+
+$externalFile = Join-Path $win64 "ue4ss\Mods\OutroMod\arquivo-preservado.txt"
+New-Item -ItemType Directory -Force -Path (Split-Path -Parent $externalFile) | Out-Null
+Set-Content -LiteralPath $externalFile -Value "preservar" -Encoding utf8
+Invoke-Launcher @("--uninstall-modpack", $gameRoot)
+$removedPaths = @(
+    (Join-Path $win64 "dwmapi.dll"),
+    (Join-Path $win64 "Palworld-Modpack"),
+    (Join-Path $win64 "ue4ss\UE4SS.dll"),
+    (Join-Path $win64 "ue4ss\palworld-modpack-state.json"),
+    (Join-Path $win64 "ue4ss\Mods\HoverTransfer"),
+    (Join-Path $win64 "ue4ss\Mods\AltTabWorkContinuation"),
+    (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch"),
+    (Join-Path $win64 "ue4ss\Mods\ItemStackExtender")
+)
+foreach ($path in $removedPaths) {
+    if (Test-Path -LiteralPath $path) { throw "A remoção preservou um arquivo do modpack: $path" }
+}
+if (-not (Test-Path -LiteralPath $externalFile)) { throw "A remoção apagou um mod externo." }
+$uninstallBackups = @(Get-ChildItem -LiteralPath (Join-Path $win64 "Palworld-Modpack-Backups") -Directory -Filter "launcher-removal-*")
+if ($uninstallBackups.Count -lt 1) { throw "O backup da remoção não foi criado." }
+
+Invoke-Launcher @("--apply-local", $gameRoot, $package, $ModpackVersion, "v$ModpackVersion", $checksum)
+if (-not (Test-Path -LiteralPath (Join-Path $win64 "ue4ss\palworld-modpack-state.json"))) { throw "A reinstalação não recriou o estado." }
+if (Test-Path -LiteralPath (Join-Path $win64 "dwmapi.dll")) { throw "A reinstalação deixou a Steam com mods ativos." }
 
 Write-Host "Teste completo do launcher concluído."

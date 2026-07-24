@@ -4,7 +4,15 @@ namespace PalworldModpackLauncher;
 
 internal sealed record OperationResult(bool Success, string Message);
 
-internal sealed record LauncherSettings(string? GameRoot);
+internal sealed record LauncherSettings(
+    string? GameRoot,
+    IReadOnlyList<string>? EnabledMods = null);
+
+internal sealed record ModOption(
+    string Id,
+    string DisplayName,
+    string Description,
+    bool EnabledByDefault);
 
 internal sealed record PackageMetadata(string Version, IReadOnlyList<string> Files);
 
@@ -19,6 +27,14 @@ internal sealed record UpdateInfo(
     Version Version,
     string Tag,
     ReleaseAsset Package,
+    ReleaseAsset Checksum);
+
+internal sealed record LauncherUpdateManifest(string Version);
+
+internal sealed record LauncherUpdateInfo(
+    Version Version,
+    string Tag,
+    ReleaseAsset Executable,
     ReleaseAsset Checksum);
 
 internal sealed record GitHubRelease(

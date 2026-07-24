@@ -1,6 +1,6 @@
 param(
-    [string]$PreviousVersion = "0.3.0",
-    [string]$NewVersion = "0.4.0"
+    [string]$PreviousVersion = "0.6.3",
+    [string]$NewVersion = "0.8.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -53,6 +53,10 @@ if ($previousVersionValue -lt [Version]'0.4.0') {
     $previousAltTabHash = (Get-FileHash -LiteralPath $altTabMain -Algorithm SHA256).Hash
 }
 $hoverMarker = Join-Path $win64 "ue4ss\Mods\HoverTransfer\enabled.txt"
+$accessoryMarker = Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\enabled.txt"
+if ($previousVersionValue -lt [Version]'0.5.0' -and (Test-Path -LiteralPath $accessoryMarker)) {
+    throw "A fixture anterior à v0.5.0 já contém Accessory Slots Research."
+}
 if (-not (Test-Path -LiteralPath $hoverMarker)) { throw "Hover Transfer ausente na versão anterior." }
 $externalFile = Join-Path $win64 "ue4ss\Mods\OutroMod\arquivo-preservado.txt"
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $externalFile) | Out-Null
@@ -66,19 +70,31 @@ $required = @(
     $altTabMain,
     (Join-Path $win64 "ue4ss\Mods\AltTabWorkContinuation\Scripts\continuation_policy.lua"),
     (Join-Path $win64 "ue4ss\Mods\AltTabWorkContinuation\Scripts\AltTabWorkContinuationFocus.dll"),
+    $accessoryMarker,
+    (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\Scripts\main.lua"),
+    (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\Scripts\config.lua"),
+    (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\Scripts\slot_limits.lua"),
+    (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\Scripts\equipment_storage.lua"),
+    (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\Scripts\slot_expander.lua"),
+    (Join-Path $win64 "ue4ss\Mods\AccessorySlotsResearch\Scripts\slot_refresher.lua"),
+    (Join-Path $win64 "ue4ss\Mods\ItemStackExtender\enabled.txt"),
+    (Join-Path $win64 "ue4ss\Mods\ItemStackExtender\config.json"),
+    (Join-Path $win64 "ue4ss\Mods\ItemStackExtender\Scripts\main.lua"),
+    (Join-Path $win64 "ue4ss\Mods\ItemStackExtender\Scripts\static_data_sync.lua"),
+    (Join-Path $win64 "Palworld-Modpack\loader\dwmapi.dll"),
     $externalFile
 )
 foreach ($path in $required) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Arquivo esperado ausente: $path" }
 }
 if ($previousAltTabHash) {
-    $newAltTabHash = (Get-FileHash -LiteralPath $altTabMain -Algorithm SHA256).Hash
-    if ($newAltTabHash -eq $previousAltTabHash) { throw "O código do AltTab não foi atualizado." }
+    if (-not (Test-Path -LiteralPath $altTabMain)) { throw "O AltTab existente foi removido durante a atualização." }
 }
 
 $statePath = Join-Path $win64 "ue4ss\palworld-modpack-state.json"
 $state = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
 if ($state.version -ne $NewVersion) { throw "Versão final incorreta: $($state.version)" }
-if ($state.managedFiles.Count -lt 14) { throw "Arquivos gerenciados incompletos: $($state.managedFiles.Count)" }
+if ($state.managedFiles.Count -lt 34) { throw "Arquivos gerenciados incompletos: $($state.managedFiles.Count)" }
+if (Test-Path -LiteralPath (Join-Path $win64 "dwmapi.dll")) { throw "A atualização deixou os mods ativos para a Steam." }
 
 Write-Host "Atualização simulada v$PreviousVersion -> v$NewVersion concluída."

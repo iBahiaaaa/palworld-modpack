@@ -8,6 +8,9 @@ internal sealed class GitHubReleaseClient : IDisposable
     public const string Repository = "iBahiaaaa/palworld-modpack";
     public const string PackageAssetName = "palworld-modpack.zip";
     public const string ChecksumAssetName = "palworld-modpack.zip.sha256";
+    public const string LauncherAssetName = "Palworld-Modpack-Launcher.exe";
+    public const string LauncherChecksumAssetName = "Palworld-Modpack-Launcher.exe.sha256";
+    public const string LauncherManifestAssetName = "launcher-version.json";
 
     private readonly HttpClient httpClient = new()
     {
@@ -16,22 +19,14 @@ internal sealed class GitHubReleaseClient : IDisposable
 
     public GitHubReleaseClient()
     {
-        httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("PalworldModpackLauncher/1.0");
+        httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Palncher/2.0");
         httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         httpClient.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
     }
 
     public async Task<UpdateInfo> GetLatestAsync(CancellationToken cancellationToken = default)
     {
-        var url = $"https://api.github.com/repos/{Repository}/releases/latest";
-        using var response = await httpClient.GetAsync(url, cancellationToken);
-        response.EnsureSuccessStatusCode();
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        var release = await JsonSerializer.DeserializeAsync<GitHubRelease>(stream, cancellationToken: cancellationToken)
-            ?? throw new InvalidDataException("O GitHub retornou uma Release inválida.");
-
-        if (release.Draft || release.Prerelease)
-            throw new InvalidDataException("A Release mais recente ainda não está publicada como estável.");
+        var release = await GetLatestReleaseAsync(cancellationToken);
 
         var versionText = release.TagName.Trim().TrimStart('v', 'V');
         if (!Version.TryParse(versionText, out var version))
@@ -46,6 +41,43 @@ internal sealed class GitHubReleaseClient : IDisposable
 
         return new UpdateInfo(version, release.TagName, package, checksum);
     }
+
+    public async Task<LauncherUpdateInfo?> GetLatestLauncherAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var release = await GetLatestReleaseAsync(cancellationToken);
+        var manifestAsset = FindAsset(release, LauncherManifestAssetName);
+        if (manifestAsset is null) return null;
+
+        var manifestText = await DownloadTextAsync(manifestAsset, cancellationToken);
+        var manifest = JsonSerializer.Deserialize<LauncherUpdateManifest>(manifestText,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+            ?? throw new InvalidDataException("O manifesto do launcher é inválido.");
+        if (!Version.TryParse(manifest.Version, out var version))
+            throw new InvalidDataException("A versão do launcher é inválida.");
+
+        var executable = FindAsset(release, LauncherAssetName)
+            ?? throw new InvalidDataException($"A Release não contém {LauncherAssetName}.");
+        var checksum = FindAsset(release, LauncherChecksumAssetName)
+            ?? throw new InvalidDataException($"A Release não contém {LauncherChecksumAssetName}.");
+        return new LauncherUpdateInfo(version, release.TagName, executable, checksum);
+    }
+
+    private async Task<GitHubRelease> GetLatestReleaseAsync(CancellationToken cancellationToken)
+    {
+        var url = $"https://api.github.com/repos/{Repository}/releases/latest";
+        using var response = await httpClient.GetAsync(url, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        var release = await JsonSerializer.DeserializeAsync<GitHubRelease>(stream, cancellationToken: cancellationToken)
+            ?? throw new InvalidDataException("O GitHub retornou uma Release inválida.");
+        if (release.Draft || release.Prerelease)
+            throw new InvalidDataException("A Release mais recente ainda não está publicada como estável.");
+        return release;
+    }
+
+    private static ReleaseAsset? FindAsset(GitHubRelease release, string name) =>
+        release.Assets.FirstOrDefault(asset => asset.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
     public async Task<string> DownloadTextAsync(ReleaseAsset asset, CancellationToken cancellationToken = default)
     {

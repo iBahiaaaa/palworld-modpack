@@ -1,10 +1,12 @@
 build/
+Backups/
 !Mods/AltTabWorkContinuation/build/
 !Mods/AltTabWorkContinuation/build/build-manifest.json
 Releases/*.exe
 Releases/*.zip
 Releases/*.sha256
 Releases/*.txt
+Releases/*.json
 Installer/HoverTransferInstaller/bin/
 Installer/HoverTransferInstaller/obj/
 Installer/HoverTransferInstaller/Payload.zip

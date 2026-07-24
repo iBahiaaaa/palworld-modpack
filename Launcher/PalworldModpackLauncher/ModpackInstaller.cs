@@ -105,7 +105,11 @@ internal sealed class ModpackInstaller
             Directory.CreateDirectory(Path.GetDirectoryName(statePath)!);
             File.WriteAllText(statePath, JsonSerializer.Serialize(state, JsonOptions));
 
-            return new OperationResult(true, $"Modpack {version.ToString(3)} instalado com sucesso.");
+            var vanilla = new ModActivationManager().EnsureVanilla(gameRoot, state);
+            if (!vanilla.Success) throw new InvalidDataException(vanilla.Message);
+
+            return new OperationResult(true,
+                $"Modpack {version.ToString(3)} instalado com sucesso. A Steam permanece em modo vanilla.");
         }
         catch (Exception exception)
         {
@@ -140,6 +144,38 @@ internal sealed class ModpackInstaller
                 "ue4ss/Mods/AltTabWorkContinuation/Scripts/main.lua",
                 "ue4ss/Mods/AltTabWorkContinuation/Scripts/continuation_policy.lua",
                 "ue4ss/Mods/AltTabWorkContinuation/Scripts/AltTabWorkContinuationFocus.dll",
+            });
+        }
+        if (packageVersion >= new Version(0, 5, 0))
+        {
+            required.AddRange(new[]
+            {
+                "ue4ss/Mods/AccessorySlotsResearch/enabled.txt",
+                "ue4ss/Mods/AccessorySlotsResearch/Scripts/main.lua",
+                "ue4ss/Mods/AccessorySlotsResearch/Scripts/config.lua",
+                "ue4ss/Mods/AccessorySlotsResearch/Scripts/slot_limits.lua",
+                "ue4ss/Mods/AccessorySlotsResearch/Scripts/equipment_storage.lua",
+                "ue4ss/Mods/AccessorySlotsResearch/Scripts/slot_expander.lua",
+                "ue4ss/Mods/AccessorySlotsResearch/Scripts/slot_refresher.lua",
+                "ue4ss/Mods/AccessorySlotsResearch/Scripts/slot_visual_style.lua",
+            });
+        }
+        if (packageVersion >= new Version(0, 6, 0))
+        {
+            required.Add("Palworld-Modpack/loader/dwmapi.dll");
+        }
+        if (packageVersion >= new Version(0, 7, 0))
+        {
+            required.AddRange(new[]
+            {
+                "ue4ss/Mods/ItemStackExtender/enabled.txt",
+                "ue4ss/Mods/ItemStackExtender/config.json",
+                "ue4ss/Mods/ItemStackExtender/Scripts/main.lua",
+                "ue4ss/Mods/ItemStackExtender/Scripts/config.lua",
+                "ue4ss/Mods/ItemStackExtender/Scripts/runtime_environment.lua",
+                "ue4ss/Mods/ItemStackExtender/Scripts/session_log.lua",
+                "ue4ss/Mods/ItemStackExtender/Scripts/stack_override.lua",
+                "ue4ss/Mods/ItemStackExtender/Scripts/static_data_sync.lua",
             });
         }
         var missing = required.Where(file => !set.Contains(file)).ToArray();

@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$ModpackVersion,
-    [string]$LauncherVersion = "1.0.0",
+    [string]$LauncherVersion = "2.0.0",
     [string]$GameRoot,
     [switch]$SkipBuild
 )
@@ -28,6 +28,7 @@ $releases = Join-Path $projectRoot "Releases"
 $assets = @(
     (Join-Path $releases "Palworld-Modpack-Launcher.exe"),
     (Join-Path $releases "Palworld-Modpack-Launcher.exe.sha256"),
+    (Join-Path $releases "launcher-version.json"),
     (Join-Path $releases "palworld-modpack.zip"),
     (Join-Path $releases "palworld-modpack.zip.sha256")
 )
@@ -43,9 +44,18 @@ if ($releaseCheck.ExitCode -eq 0) { throw "A Release $tag já existe. Use uma ve
 $notes = @"
 ## Palworld Modpack $ModpackVersion
 
-- Atualização automática pelo launcher.
+- Palncher 2.0 com identidade visual minimalista.
+- Paleta do Sistema Academia, com fundo escuro e destaque laranja.
+- Atualização automática pelo Palncher.
+- Autoatualização do próprio Palncher incluída.
+- O Palncher pode atualizar seu executável mesmo com o Palworld aberto.
+- Steam inicia o Palworld vanilla; o Palncher ativa os mods somente durante a sessão.
+- Opção para remover o modpack com backup automático.
+- Instalação local sem administrador, com atalhos na Área de Trabalho e Menu Iniciar.
 - Hover Transfer incluído.
 - AltTab Work Continuation incluído.
+- Accessory Slots Research incluído com 10 slots totais.
+- Item Stack Extender incluído com pilhas de até 100.000 itens.
 - UE4SS incluído no pacote de cliente.
 - Verificação de integridade por SHA-256.
 

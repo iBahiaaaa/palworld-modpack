@@ -1,0 +1,5 @@
+{
+  "Enabled": true,
+  "MaxStack": 100000,
+  "PreserveSingleItems": true
+}

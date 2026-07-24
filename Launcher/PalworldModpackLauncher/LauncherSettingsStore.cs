@@ -24,11 +24,31 @@ internal static class LauncherSettingsStore
         }
     }
 
-    public static void Save(string gameRoot)
+    public static void Save(string gameRoot, IReadOnlyCollection<string>? enabledMods = null)
     {
         Directory.CreateDirectory(DirectoryPath);
-        File.WriteAllText(FilePath, JsonSerializer.Serialize(new LauncherSettings(gameRoot), JsonOptions));
+        var current = Load();
+        var selection = enabledMods?.OrderBy(value => value, StringComparer.OrdinalIgnoreCase).ToArray()
+            ?? (PathsEqual(current.GameRoot, gameRoot) ? current.EnabledMods : null);
+        File.WriteAllText(
+            FilePath,
+            JsonSerializer.Serialize(new LauncherSettings(gameRoot, selection), JsonOptions));
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+
+    private static bool PathsEqual(string? first, string? second)
+    {
+        if (string.IsNullOrWhiteSpace(first) || string.IsNullOrWhiteSpace(second)) return false;
+        try
+        {
+            return Path.GetFullPath(first).Equals(
+                Path.GetFullPath(second),
+                StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }

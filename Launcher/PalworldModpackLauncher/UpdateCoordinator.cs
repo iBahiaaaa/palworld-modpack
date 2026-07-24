@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace PalworldModpackLauncher;
 
 internal sealed class UpdateCoordinator : IDisposable
@@ -39,17 +37,6 @@ internal sealed class UpdateCoordinator : IDisposable
             try { Directory.Delete(tempDirectory, recursive: true); }
             catch { }
         }
-    }
-
-    public static bool IsPalworldRunning()
-    {
-        return Process.GetProcessesByName("Palworld-Win64-Shipping").Length > 0 ||
-               Process.GetProcessesByName("Palworld").Length > 0;
-    }
-
-    public static void LaunchGame()
-    {
-        Process.Start(new ProcessStartInfo("steam://rungameid/1623730") { UseShellExecute = true });
     }
 
     private static Version? ParseVersion(string? value) => Version.TryParse(value, out var version) ? version : null;
